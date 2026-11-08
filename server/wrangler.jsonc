@@ -1,0 +1,9 @@
+{
+ "$schema":"node_modules/wrangler/config-schema.json", "name":"seslen", "main":"src/index.js", "compatibility_date":"2026-11-09",
+ "assets":{"directory":"../iphone","binding":"ASSETS","run_worker_first":true},
+ "d1_databases":[{"binding":"DB","database_name":"seslen","database_id":"REPLACE_WITH_D1_ID","migrations_dir":"migrations"}],
+ "r2_buckets":[{"binding":"AUDIO","bucket_name":"seslen-audio"}],
+ "vars":{"ORIGIN":"https://REPLACE_WITH_YOUR_DOMAIN","GOOGLE_CLIENT_ID":"REPLACE_WITH_CLIENT_ID"},
+ "observability":{"enabled":true,"traces":{"enabled":true}},
+ "triggers":{"crons":["17 3 * * *"]}
+}

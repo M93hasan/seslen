@@ -1,0 +1,1 @@
+{"name":"seslen-server","private":true,"type":"module","scripts":{"test":"node --test test/*.test.js","dev":"wrangler dev","check":"wrangler deploy --dry-run"},"dependencies":{"jose":"6.1.0"},"devDependencies":{"wrangler":"4.45.0"}}
