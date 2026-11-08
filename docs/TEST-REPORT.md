@@ -41,8 +41,10 @@ Lint uyarıları Türkçe sabit arayüz metinleri, bilinçli senkron kuyruk kayd
 - Google OAuth gerçek hesap ve mobil ağ üzerinden uçtan uca test yapılmadı; Cloudflare/Google yapılandırması henüz yok.
 - iPhone arka plan “görüldü” push bildirimi yok; web ekranında durum yenilemesi var.
 - Kesinti anında oynayan sesin tam olarak bir kere fiziksel çalması garanti edilmez; ağ tekrarı kuyruğu çoğaltmaz.
-- Bağımsız güvenlik denetimi, kararlı release imzası, GitHub Actions çalışması ve Releases yayını yapılmadı.
+- Bağımsız güvenlik denetimi, kararlı release imzası ve Releases yayını yapılmadı. GitHub Actions güncel durumu aşağıdadır.
 
-## GitHub ve yayın
+## GitHub ve yayın — güncelleme
 
-Bu oturumda private depo oluşturma aracı yok, CLI oturumu açık değil, tarayıcı GitHub giriş ekranında. Bu nedenle depo, PR, Issues ve artifact bağlantıları üretilemedi. Kaynak dalı `develop/first-apk` olarak yerelde hazırlandı. main'e birleştirme ve canlı yayın yapılmadı. Kaynak, APK, belgeler ve kalan işler teslim paketindedir.
+Özel depo ve [PR #1](https://github.com/M93hasan/seslen/pull/1) oluşturuldu. GitHub sunucu testleri ve Worker dry-run başarılı. İlk Android işi SDK kurulumunda artık bulunmayan `tools` paketi yüzünden başarısız oldu. CI ve release iş akışları `platform-tools platforms;android-35 build-tools;35.0.0` paketlerini açıkça kuracak şekilde düzeltildi; [yeni çalışma](https://github.com/M93hasan/seslen/actions/runs/42533789874) başlatıldı. Nihai sonuç ve artifact bağlantısı [Issue #2](https://github.com/M93hasan/seslen/issues/2) üzerinde takip edilir.
+
+Cloudflare hesabı kontrol edildi: R2 etkin değil (API 10042). Google OAuth ve sunucu yayını hazırlanmış koddan ayrı kurulum adımlarıdır; [Issue #3](https://github.com/M93hasan/seslen/issues/3). Gerçek cihaz testleri ve canlı yayın yapılmadı; main değiştirilmedi. Yukarıdaki APK hash'i ilk yerel teslimata aittir; Actions APK'sı farklı debug imzası/hash içerebilir.

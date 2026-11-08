@@ -1,8 +1,8 @@
-# GitHub'a aktarılacak işler
+# Seslen — kalan işler
 
-GitHub oturumu ve depo oluşturma erişimi yokluğu nedeniyle Issues/PR henüz açılmadı.
+Kaynak aktarımı tamamlandı: [PR #1](https://github.com/M93hasan/seslen/pull/1). Güncel kabul listesi [Issue #2](https://github.com/M93hasan/seslen/issues/2), sunucu kurulum engelleri [Issue #3](https://github.com/M93hasan/seslen/issues/3) üzerinden takip edilir.
 
-- [ ] Private `M93hasan/seslen` deposu; yalnız başlangıç belgesi olan main; `develop/first-apk` kaynak dalını yükle ve taslak PR aç. PR'ı onaysız birleştirme.
+- [x] Private `M93hasan/seslen` deposu; yalnız başlangıç belgesi olan main; `develop/first-apk` kaynak dalını yükle ve taslak PR aç. PR'ı onaysız birleştirme.
 - [ ] Actions kontrollerini gerçek GitHub ortamında çalıştır; APK artifact erişimini doğrula.
 - [ ] Google web OAuth client ve test Cloudflare kaynaklarını yapılandır; onaydan sonra test yayını.
 - [ ] Philips gerçek cihaz APK kurulumu, Android sürümü ve overlay odağı/OK testi.
