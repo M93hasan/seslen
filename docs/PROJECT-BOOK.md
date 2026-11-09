@@ -231,3 +231,30 @@ Kullanıcının verdiği logo Android TV simgesi ve launcher afişinde kullanıl
 - [GitHub Actions #42688089920](https://github.com/M93hasan/seslen/actions/runs/42688089920): Android `assembleDebug`, birim testleri ve lint ile Node sunucu testleri/Worker dry-run sonucu **başarılı**.
 - ZIP artifact'in içindeki `app-debug.apk` ayrıca kullanıcıya `Seslen-0.4.0-Logo-Guncelleme-Test.apk` adıyla, ZIP'siz doğrudan ChatGPT dosyası olarak çıkarıldı. Bu **debug imzalı test APK**; production imzası, kararlı güncelleme kanalı ve otomatik dağıtım henüz açılmadı.
 - Bir sonraki onaylı production APK hazırlanırken mevcut test APK'nın imzası farklı olabileceğinden ilk kurulum için kontrollü yeniden yükleme/eşleştirme ihtimali açıkça belirtilmelidir.
+
+
+## 16. Son kullanıcı teyitleri — uyku modu, logo ve özel alan adı Google girişi (9 Kasım 2026)
+
+### 16.1. Kullanıcının gerçek kullanım koşulları
+- Kullanıcının **Philips 58PUS8506/62 Android TV'si genellikle tamamen kapalı değil, uyku/bekleme modunda** tutuluyor.
+- Kullanıcı, iPhone'daki **Google TV uygulaması üzerinden beklemedeki televizyonu açabildiğini** açıkça teyit etti.
+- **Mobil veriyle Google TV üzerinden uyandırma henüz doğrulanmadı.** Kullanıcıya Wi-Fi'ı kapatıp mobil bağlantıyla denemesi soruldu; olumlu yanıt kaydı yok. Google TV'nin uyandırması, Seslen uygulamasının bu özelliği bugün kendiliğinden kullanabildiği anlamına gelmez.
+- Nihai hedef: Mesaj iPhone'dan gönderilir → TV uyku modundan yetkili/güvenli ağ yöntemleriyle uyanır → mesajı **üç kez** seslendirir → kumandadan **OK** ile görülmüş sayılır.
+- TV fişten çekilmişse hiçbir yöntemle açılmaz. Açılamazsa mesaj D1 kuyruğunda tutulur; sahte “Görüldü” durumu bildirilmez.
+- Geliştirme ve gerçek cihaz testleri [Issue #9 — Beklemede uyandırma](https://github.com/M93hasan/seslen/issues/9) altında ayrıntılarıyla kaydedildi.
+
+### 16.2. Google giriş sorununun somut doğrulaması
+- Kullanıcı **https://seslen.serula.site** adresinde Google girişinden sonra \`{"error":"Ä°stek tamamlanamadÄ±"}\` gördüğünü yeniden bildirdi. Bu genel yanıt Türkçe “İstek tamamlanamadı” mesajının karakter kodlaması bozulmuş hâlidir.
+- Bağlı **Cloudflare Worker** üzerinde \`seslen.serula.site\` özel alan adı \`seslen-staging\` script'ine bağlı. Worker \`ORIGIN\` ayarı ise **\`https://seslen-staging.m93hasan.workers.dev\`** olarak kaldı. Kaynak kodu OAuth \`redirect_uri\` değerini her zaman bu eski adresten oluşturuyordu; özel alan adı için oluşturulan OAuth çerezi yanlış hostun callback'ine gittiğinde giriş başarısız olabilir. Bu, doğrulanmış bir uyumsuzluktur; tek olası hata nedeni olduğu iddia edilmez.
+- \`fix/custom-domain-google-oauth\` dalında [**PR #10 — Google OAuth özel alan adı ve UTF-8 düzeltmesi**](https://github.com/M93hasan/seslen/pull/10) açıldı. İki izinli hostta OAuth callback'i girişin yapıldığı hostla eşleştirir, çerezli mutasyonlara sıkı Origin doğrulaması uygular, JSON yanıtında \`charset=utf-8\` belirtir ve regresyon testleri içerir.
+- **Bu düzeltme henüz canlı Worker'da yayımlanmadı.** Github testlerinin geçmesi ve Google Console'da aşağıdaki URI'ların kaydedilmiş olması gerekir; gerçek Safari giriş testi yapılmadan “çözüldü” denmez:
+  - Authorized JavaScript origins: \`https://seslen.serula.site\` (eski staging origin'i de korunabilir).
+  - Authorized redirect URIs: \`https://seslen.serula.site/auth/callback\` ve \`https://seslen-staging.m93hasan.workers.dev/auth/callback\`.
+- Secret değerleri, oturum çerezleri ve gerçek Google token'ları burada **bulunmaz**. Mevcut D1 ve ses/mesaj verileri korunur.
+
+### 16.3. Korumaya devam edilecek tercihler
+- Kullanıcı Seslen'deki çalışan tüm fonksiyonların korunmasını, Android TV APK'sı ve web sitesinde **yalnız renk/boşluk/tipografi/buton gibi görünüm iyileştirmeleri** yapılmasını istedi. Giriş hatasının giderilmesi ise ayrı, dar kapsamlı bir hata düzeltmesidir.
+- Kullanıcının verdiği logo 0.4.0 test APK'sına [PR #8](https://github.com/M93hasan/seslen/pull/8) üzerinde eklendi; [CI başarılı](https://github.com/M93hasan/seslen/actions/runs/42688089920). ZIP yerine **doğrudan APK** indirme tercih ediliyor.
+- Her sonraki sürümde APK dosyasını tekrar taşımamak amacıyla güvenli güncelleme denetleyicisi [PR #7](https://github.com/M93hasan/seslen/pull/7) üzerinde kodlandı; **kararlı imza ve onaylı APK dağıtımı olmadan etkin değil**.
+- Kaynak kodu \`main\` dalına kullanıcı açık onayı olmadan birleştirilmez. Canlı Worker, D1, Google secrets ve çalışan diğer ayarlar değiştirilmez; yeni bir dağıtım öncesi test ve kullanıcı onayı aranır.
+
