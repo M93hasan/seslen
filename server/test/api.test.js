@@ -1,6 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';import {readFileSync} from 'node:fs';import worker from '../src/index.js';
 const digest=async s=>Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))).toString('hex');
-function setup(){const sql=new DatabaseSync(':memory:');for(const name of ['0001.sql','0002_audio_storage.sql','0003_push.sql','0004_account_connect.sql'])sql.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));function prep(query){let args=[];const stmt={bind(...values){args=values.map(v=>v instanceof ArrayBuffer?new Uint8Array(v):v);return stmt},async first(){return sql.prepare(query).get(...args)||null},async all(){return {results:sql.prepare(query).all(...args)}},async run(){const r=sql.prepare(query).run(...args);return {meta:{changes:Number(r.changes)}}}};return stmt}const objects=new Map();return {sql,env:{ORIGIN:'https://seslen.example',DB:{prepare:prep,async batch(stmts){sql.exec('BEGIN');try{const r=[];for(const s of stmts)r.push(await s.run());sql.exec('COMMIT');return r}catch(e){sql.exec('ROLLBACK');throw e}}},AUDIO:{async put(id,bytes,metadata){objects.set(id,{body:bytes,httpMetadata:metadata.httpMetadata})},async get(id){return objects.get(id)},async delete(id){objects.delete(id)}},ASSETS:{fetch(){return new Response('Seslen')}}}}}
+function setup(){const sql=new DatabaseSync(':memory:');for(const name of ['0001.sql','0002_audio_storage.sql','0003_push.sql','0004_account_connect.sql','0005_ios_native.sql'])sql.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));function prep(query){let args=[];const stmt={bind(...values){args=values.map(v=>v instanceof ArrayBuffer?new Uint8Array(v):v);return stmt},async first(){return sql.prepare(query).get(...args)||null},async all(){return {results:sql.prepare(query).all(...args)}},async run(){const r=sql.prepare(query).run(...args);return {meta:{changes:Number(r.changes)}}}};return stmt}const objects=new Map();return {sql,env:{ORIGIN:'https://seslen.example',DB:{prepare:prep,async batch(stmts){sql.exec('BEGIN');try{const r=[];for(const s of stmts)r.push(await s.run());sql.exec('COMMIT');return r}catch(e){sql.exec('ROLLBACK');throw e}}},AUDIO:{async put(id,bytes,metadata){objects.set(id,{body:bytes,httpMetadata:metadata.httpMetadata})},async get(id){return objects.get(id)},async delete(id){objects.delete(id)}},ASSETS:{fetch(){return new Response('Seslen')}}}}}
 async function seed(env,token='sender',owner='one',kind='sender'){await env.DB.prepare('INSERT INTO sessions VALUES(?,?,?,?)').bind(await digest(token),owner,kind,Math.floor(Date.now()/1000)+1000).run()}
 function call(env,path,body,token,extra={}){return worker.fetch(new Request('https://seslen.example'+path,{method:body===undefined?'GET':'POST',headers:{...(token?{Authorization:'Bearer '+token}:{}),...extra},body:body===undefined?undefined:JSON.stringify(body)}),env)}
 async function paired(env){await seed(env,'browser','one','browser');const p=await (await call(env,'/api/pair/start',{})).json();assert.equal((await call(env,'/api/pair/confirm',{code:p.code,name:'TV'},'browser')).status,200);const {token}=await (await call(env,'/api/pair/poll',{poll:p.poll})).json();assert.ok(token);return {token,id:(await (await call(env,'/api/devices',undefined,'browser')).json()).devices[0].id,p};}
@@ -64,3 +64,50 @@ test('browser cookie mutations allow only matching request origin, not foreign o
  assert.equal((await make('https://seslen-staging.m93hasan.workers.dev','https://seslen.serula.site')).status,403);
  assert.equal((await make('https://evil.example','https://evil.example')).status,403);
 });
+
+
+test('native iPhone browser OAuth uses existing Google Web client and bound PKCE challenge',async()=>{
+ const {env,sql}=setup();env.ORIGIN='https://seslen-staging.m93hasan.workers.dev';
+ env.GOOGLE_CLIENT_ID='test.apps.googleusercontent.com';env.GOOGLE_CLIENT_SECRET='secret';
+ const challenge='A'.repeat(43);
+ const r=await worker.fetch(new Request('https://seslen.serula.site/auth/ios/login?challenge='+challenge),env);
+ assert.equal(r.status,302);
+ const target=new URL(r.headers.get('Location'));
+ assert.equal(target.searchParams.get('redirect_uri'),'https://seslen.serula.site/auth/callback');
+ assert.equal(target.searchParams.get('code_challenge_method'),'S256');
+ assert.equal(sql.prepare('SELECT pair_code FROM oauth').get().pair_code,'ios:'+challenge);
+ assert.equal((await worker.fetch(new Request('https://seslen.serula.site/auth/ios/login?challenge=https://evil'),env)).status,400);
+});
+
+test('native ticket exchange is PKCE-verified, one-time and shares Google browser account',async()=>{
+ const {env,sql}=setup();
+ const verifier='A'.repeat(43);
+ const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier));
+ const challenge=Buffer.from(digest).toString('base64url');
+ const ticket='a'.repeat(64);
+ const digestTicket=await digestValue(ticket);
+ sql.prepare('INSERT INTO accounts(owner,email) VALUES(?,?)').run('native-owner','iphone@example.test');
+ sql.prepare('INSERT INTO ios_tickets(hash,owner,challenge,expires) VALUES(?,?,?,?)')
+  .run(digestTicket,'native-owner',challenge,Math.floor(Date.now()/1000)+100);
+ const invalid=await call(env,'/api/ios/token',{ticket,verifier:'B'.repeat(43)});
+ assert.equal(invalid.status,403);
+ const ok=await call(env,'/api/ios/token',{ticket,verifier});
+ assert.equal(ok.status,200);
+ const data=await ok.json();
+ assert.equal(data.expiresDays,30);
+ assert.match(data.token,/^[a-f0-9]{64}$/);
+ const account=await (await call(env,'/api/account',undefined,data.token)).json();
+ assert.equal(account.email,'iphone@example.test');
+ assert.equal((await call(env,'/api/ios/token',{ticket,verifier})).status,403);
+ assert.equal((await call(env,'/api/logout',{},data.token)).status,200);
+ assert.equal((await call(env,'/api/account',undefined,data.token)).status,401);
+});
+
+test('expired native tickets never issue tokens',async()=>{
+ const {env,sql}=setup();const ticket='b'.repeat(64),verifier='C'.repeat(43);
+ const challenge=Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))).toString('base64url');
+ sql.prepare('INSERT INTO ios_tickets(hash,owner,challenge,expires) VALUES(?,?,?,?)').run(await digestValue(ticket),'expired-owner',challenge,1);
+ assert.equal((await call(env,'/api/ios/token',{ticket,verifier})).status,403);
+});
+
+const digestValue=digest;
