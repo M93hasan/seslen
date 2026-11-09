@@ -85,7 +85,28 @@ class MainActivity:Activity() {
    h.post{if(g==generation.get()){qr.visibility=View.GONE;status.text="QR’ın süresi doldu. Yenileyerek tekrar bağlanabilirsin.";pairButton.isEnabled=true}}
   }catch(e:Exception){h.post{if(g==generation.get()){status.text="Bağlantı kurulamadı. TV’nin internetini kontrol edip tekrar dene.";pairButton.isEnabled=true}}}}.start()
  }
- override fun onResume(){super.onResume();if(::status.isInitialized&&prefs.getBoolean("resumeReceiver",false)&&Settings.canDrawOverlays(this))startReceiver()}
+ override fun onResume(){
+  super.onResume()
+  if(!::status.isInitialized)return
+  if(prefs.getBoolean("resumeReceiver",false)&&Settings.canDrawOverlays(this)){
+   startReceiver()
+   return
+  }
+  // A foreground service can be stopped by Android during an app update or under memory pressure.
+  // Reopening Seslen should restore a receiver that the user previously enabled.
+  if(prefs.getBoolean("enabled",false)&&Vault(this).token().isNotBlank()){
+   if(!Settings.canDrawOverlays(this)){
+    status.text="Ekranda gösterme izni gerekli. Mesajlar TV bağlanana kadar bekler."
+    return
+   }
+   try{
+    startForegroundService(Intent(this,MessageService::class.java))
+    status.text="Mesaj alıcısı açık · Seslenmeye hazır"
+   }catch(e:Exception){
+    status.text="Alıcı başlatılamadı. Mesaj alıcısını aç'a bas."
+   }
+  }
+ }
  override fun onDestroy(){generation.incrementAndGet();h.removeCallbacksAndMessages(null);super.onDestroy()}
 }
 class BootReceiver:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){if(i.action==Intent.ACTION_BOOT_COMPLETED&&c.getSharedPreferences("seslen",0).getBoolean("enabled",false))try{c.startForegroundService(Intent(c,MessageService::class.java))}catch(e:Exception){/* Android may require manual start. */}}}
