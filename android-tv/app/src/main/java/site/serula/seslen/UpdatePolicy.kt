@@ -19,5 +19,5 @@ object UpdatePolicy {
         release.versionName.matches(Regex("[0-9]+\\.[0-9]+\\.[0-9]+")) &&
         release.apkUrl == APK_URL &&
         release.sha256.matches(Regex("[a-f0-9]{64}")) &&
-        release.sizeBytes in 1..MAX_APK_BYTES
+        release.sizeBytes in 1L..MAX_APK_BYTES
 }
