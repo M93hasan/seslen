@@ -224,3 +224,10 @@ Kullanıcının verdiği logo Android TV simgesi ve launcher afişinde kullanıl
 - Release workflow'unda kalıcı imzalı APK ve sürüm manifest'i oluşturulur; Cloudflare'a yayımlama **varsayılan olarak kapalı**, yalnız onaylı `production` ortamında ayrı seçimle mümkündür. Özel GitHub Actions artifact ZIP'i güncelleme kaynağı değildir.
 - [Teknik kurulum ve güvenlik belgesi](https://github.com/M93hasan/seslen/blob/feat/tv-safe-self-updater/docs/TV-UPDATES.md) ile [Issue #6](https://github.com/M93hasan/seslen/issues/6) beraber izlenir.
 - **Engeller:** Kararlı imza anahtarı/secret kurulumu, üretim APK'sının canlı adreste yayımlanması, gerçek Philips TV testi ve kullanıcı onaylı PR birleştirme. Mevcut debug APK'ların farklı imzalı oluşu nedeniyle ilk kararlı geçişte yeniden kurulum gerekebilir.
+
+
+### 15.2. 0.4.0 test APK — kullanıcının logosuyla birlikte doğrulandı
+- [Taslak PR #8](https://github.com/M93hasan/seslen/pull/8): kullanıcı tarafından gönderilen logo, 0.4 otomatik güncelleme denetleyicisiyle **ayrı entegrasyon test dalında** birleştirildi.
+- [GitHub Actions #42688089920](https://github.com/M93hasan/seslen/actions/runs/42688089920): Android `assembleDebug`, birim testleri ve lint ile Node sunucu testleri/Worker dry-run sonucu **başarılı**.
+- ZIP artifact'in içindeki `app-debug.apk` ayrıca kullanıcıya `Seslen-0.4.0-Logo-Guncelleme-Test.apk` adıyla, ZIP'siz doğrudan ChatGPT dosyası olarak çıkarıldı. Bu **debug imzalı test APK**; production imzası, kararlı güncelleme kanalı ve otomatik dağıtım henüz açılmadı.
+- Bir sonraki onaylı production APK hazırlanırken mevcut test APK'nın imzası farklı olabileceğinden ilk kurulum için kontrollü yeniden yükleme/eşleştirme ihtimali açıkça belirtilmelidir.
