@@ -29,6 +29,10 @@ class MainActivity:Activity() {
  private lateinit var qr:ImageView
  private lateinit var code:TextView
  private lateinit var pairButton:Button
+ private lateinit var updateAction:Button
+ private var availableUpdate:UpdateRelease?=null
+ private var checkingUpdate=false
+ private var installingUpdate=false
  private val ink=Color.rgb(235,242,225)
  private val muted=Color.rgb(168,191,172)
  private val accent=Color.rgb(204,225,168)
@@ -59,6 +63,10 @@ class MainActivity:Activity() {
   button("Mesaj alıcısını aç") {startReceiver()}
   button("Ekranda gösterme iznini aç") {startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:$packageName")))}
   button("Görüntü ve Türkçe ses testi") {if(Settings.canDrawOverlays(this))startForegroundService(Intent(this,MessageService::class.java).putExtra("test",true))else status.text="Önce ekranda gösterme iznini aç."}
+  updateAction=button("Güncellemeleri kontrol et") {
+   val release=availableUpdate
+   if(release==null)checkForUpdates(manual=true) else confirmUpdate(release)
+  }
   val advanced=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;visibility=View.GONE}
   button("Ses ve görüntü ayarları") {advanced.visibility=if(advanced.visibility==View.GONE)View.VISIBLE else View.GONE}
   content.addView(advanced)
@@ -74,6 +82,72 @@ class MainActivity:Activity() {
   right.addView(text("iPhone kameranla QR’ı okut.\nGoogle hesabınla giriş yapıp bu TV’yi onayla.\nAynı hesapla açtığın panelde TV’n hazır olacak.",14f,ink).apply{gravity=Gravity.CENTER;setPadding(dp(4),dp(12),dp(4),0)})
   root.addView(text("GÖSTERİM: 3 TEKRAR     •     KUMANDADAN OK İLE GÖRÜLDÜ     •     0.3 TEST",10f,muted).apply{setPadding(0,dp(14),0,0)})
   setContentView(root);showState();pairButton.requestFocus()
+  checkForUpdates(manual=false)
+ }
+ private fun checkForUpdates(manual:Boolean){
+  if(checkingUpdate||installingUpdate)return
+  checkingUpdate=true
+  if(manual)updateAction.text="Güncelleme kontrol ediliyor…"
+  Thread{
+   try{
+    val release=UpdateClient.findUpdate(this)
+    h.post{
+     if(isFinishing||isDestroyed)return@post
+     availableUpdate=release
+     updateAction.text=if(release!=null)"Yeni sürüm "+release.versionName+" · Güncelle" else "Güncellemeleri kontrol et"
+     if(manual&&release==null)Toast.makeText(this,"Yeni sürüm bulunamadı.",Toast.LENGTH_SHORT).show()
+     checkingUpdate=false
+    }
+   }catch(e:Exception){
+    h.post{
+     if(isFinishing||isDestroyed)return@post
+     checkingUpdate=false
+     updateAction.text="Güncellemeleri kontrol et"
+     if(manual)Toast.makeText(this,"Güncelleme kaynağına ulaşılamadı.",Toast.LENGTH_LONG).show()
+    }
+   }
+  }.start()
+ }
+ private fun confirmUpdate(release:UpdateRelease){
+  if(installingUpdate)return
+  if(Build.VERSION.SDK_INT>=26&&!packageManager.canRequestPackageInstalls()){
+   AlertDialog.Builder(this).setTitle("Kurulum izni gerekli")
+    .setMessage("Seslen güncellemelerini yüklemek için Android'in bu uygulamaya kurulum izni vermesi gerekiyor. Bir kez izin verdikten sonra yeniden Güncelle'yi seç.")
+    .setNegativeButton("Vazgeç",null)
+    .setPositiveButton("İzin ekranını aç"){_,_->
+     startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+packageName)))
+    }.show()
+   return
+  }
+  AlertDialog.Builder(this)
+   .setTitle("Seslen "+release.versionName+" güncellensin mi?")
+   .setMessage("APK Seslen'in güvenli adresinden indirilecek. Uygulama imzası ve dosya bütünlüğü kontrol edilecek. Android ek bir kurulum onayı isteyebilir.")
+   .setNegativeButton("Daha sonra",null)
+   .setPositiveButton("Güncelle"){_,_->
+    installingUpdate=true
+    updateAction.isEnabled=false
+    Thread{
+     try{
+      UpdateClient.downloadAndInstall(this,release){message->
+       h.post{if(!isFinishing&&!isDestroyed)status.text=message}
+      }
+      h.post{if(!isFinishing&&!isDestroyed)status.text="Android kurulum sonucu bekleniyor…"}
+     }catch(e:Exception){
+      h.post{
+       if(!isFinishing&&!isDestroyed){
+        status.text=e.message?:"Güncelleme kurulamadı; mevcut sürüm korunuyor."
+       }
+      }
+     }finally{
+      h.post{
+       if(!isFinishing&&!isDestroyed){
+        installingUpdate=false
+        updateAction.isEnabled=true
+       }
+      }
+     }
+    }.start()
+   }.show()
  }
  private fun showState(){val paired=Vault(this).token().isNotBlank();pairButton.text=if(paired)"Google hesabını yeniden bağla" else "Google hesabıyla bağlan";val account=prefs.getString("account","")!!;subtitle.text=if(paired)if(account.isNotBlank())"Google hesabına bağlı: $account" else "Google hesabına bağlı televizyon" else "Telefonundan gelen mesajlar televizyonda görünür ve seslendirilir.";status.text=if(paired)if(Settings.canDrawOverlays(this))"TV bağlı · Mesaj alıcısını açabilirsin" else "TV bağlı · Ekranda gösterme izni gerekli" else "Bağlanmak için Google hesabıyla bağlan’a bas."}
  private fun startReceiver(){if(Vault(this).token().isBlank()){status.text="Önce Google hesabına bağlan.";return};if(!Settings.canDrawOverlays(this)){status.text="Ekranda gösterme iznini aç, ardından geri dön.";prefs.edit().putBoolean("resumeReceiver",true).apply();startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:$packageName")));return};if(Build.VERSION.SDK_INT>=33)requestPermissions(arrayOf("android.permission.POST_NOTIFICATIONS"),1);prefs.edit().putBoolean("enabled",true).putBoolean("resumeReceiver",false).apply();startForegroundService(Intent(this,MessageService::class.java));status.text="Mesaj alıcısı açık · Seslenmeye hazır"}
