@@ -1,0 +1,48 @@
+name: Approved stable APK release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Approved existing tag on main (for example v1.0.0)
+        required: true
+permissions:
+  contents: read
+jobs:
+  release:
+    environment: production
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+          fetch-depth: 0
+      - run: git merge-base --is-ancestor HEAD origin/main
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build unsigned release
+        working-directory: android-tv
+        run: chmod +x gradlew && ./gradlew assembleRelease lintRelease
+      - name: Sign release
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          printf '%s' "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$RUNNER_TEMP/release.jks" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --ks-key-alias "$KEY_ALIAS" --out seslen.apk android-tv/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify seslen.apk
+      - name: Publish approved release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.version }}
+        run: gh release create "$RELEASE_TAG" seslen.apk --verify-tag --generate-notes
