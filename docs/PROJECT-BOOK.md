@@ -208,3 +208,9 @@ Bu komutların çalışması gerçek iPhone/Philips kabul testlerinin yerini tut
 
 ## 14. Değişiklik kayıtlarını güncelleme kuralı
 Her iş sonunda önce bu kitaptaki ilgili satırı, sonra GitHub Issue/PR yorumunu ve gerekliyse README'deki son durumu güncelle. **Kodun varlığı ≠ testin geçmesi ≠ gerçek cihaz kabulü ≠ üretim yayını.** Tamamlandı denilen her aşamanın commit, CI çalışması veya gerçek cihaz sonucu bulunmalıdır. Tespit edilmeyen hataya kesin neden atfetme. Gizli bilgiler kayda alınmaz. Ayrı projeler izinsiz değiştirilmez.
+
+
+## 15. Güncelleme sistemi kararı — 9 Kasım 2026
+Kullanıcı TV'ye her yeni APK sürümünü elle indirip yeniden kurmak istemiyor. Hedef: Seslen sürümleri güvenilir, doğrudan HTTPS APK kanalından takip edecek, TV'de yeni sürümü indirecek, Android'in kurulum politikasına uygunsa yükleyecek; Android bir onay gerektiriyorsa kullanıcı kumandadan onay verecek. **Her cihazda sessiz güncelleme garantisi verilmez.** Ön koşullar: artan `versionCode`, değişmeyen ve güvenli saklanan kalıcı APK imzası, onaylı release ile dağıtılan doğrudan APK, SHA-256 ve sertifika/paket kimliği doğrulaması, başarısız kurulumda mevcut kullanıcı ayarlarının korunması. GitHub Actions ZIP test artifact'i güncelleme kanalı değildir. Test APK'dan stable imzaya ilk geçişte tek seferlik yeniden kurulum gerekebilir. Ayrıntılı takip: [Issue #6 — Güvenli TV otomatik güncelleme](https://github.com/M93hasan/seslen/issues/6). **Bu özellik şu anda uygulanmadı; ayrı geliştirme işidir.**
+
+Kullanıcının verdiği logo Android TV simgesi ve launcher afişinde kullanılmak üzere ayrı [taslak PR #5](https://github.com/M93hasan/seslen/pull/5)'te hazırlandı; yalnız görsel kaynaklar ve manifest ikon/afiş referansları değiştirildi. Gerçek TV görünümü ve APK CI kanıtı tamamlanmadan main'e birleştirilmeyecek.
