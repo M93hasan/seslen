@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import SwiftUI
 
 @MainActor
 final class SeslenVoiceRecorder: NSObject, ObservableObject, AVAudioPlayerDelegate {
