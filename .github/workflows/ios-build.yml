@@ -1,0 +1,36 @@
+name: Seslen native iOS simulator build
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-build.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select installed Xcode
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Prepare Seslen app icon from existing logo
+        run: bash ios/prepare-assets.sh
+      - name: Generate Xcode project
+        run: xcodegen generate --spec ios/project.yml
+      - name: Build native iPhone simulator app (no signing, no production changes)
+        run: |
+          xcodebuild -project ios/Seslen.xcodeproj -scheme Seslen -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/DerivedData CODE_SIGNING_ALLOWED=NO build
+      - name: Upload unsigned simulator build
+        uses: actions/upload-artifact@v4
+        with:
+          name: seslen-ios-simulator-unsigned
+          path: ios/DerivedData/Build/Products/Debug-iphonesimulator/Seslen.app
+          retention-days: 7
