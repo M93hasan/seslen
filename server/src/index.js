@@ -30,9 +30,12 @@ export default {
  const url=new URL(req.url),path=url.pathname;assert(url.protocol==='https:'||url.hostname==='localhost'||url.hostname==='127.0.0.1',400);
  if(path==='/health')return json({app:'Seslen',version:'0.3.0-test'});
  if(path.startsWith('/api/')||path.startsWith('/auth/'))await rate(req,env,path);
- if(path==='/auth/login'&&req.method==='GET'){
+ if((path==='/auth/login'||path==='/auth/ios/login')&&req.method==='GET'){
  assert(env.GOOGLE_CLIENT_SECRET&&env.GOOGLE_CLIENT_ID&&!env.GOOGLE_CLIENT_ID.startsWith('REPLACE_'),503);
- const pairing=url.searchParams.get('pair')||'';if(pairing){assert(/^[A-F0-9]{12}$/.test(pairing));assert(await env.DB.prepare('SELECT code FROM pairs WHERE code=? AND expires>? AND token IS NULL').bind(pairing,now()).first(),410);}
+ const native=path==='/auth/ios/login';
+ const pairing=native?'ios:'+(url.searchParams.get('challenge')||''):(url.searchParams.get('pair')||'');
+ if(native){assert(/^ios:[A-Za-z0-9_-]{43}$/.test(pairing));}
+ else if(pairing){assert(/^[A-F0-9]{12}$/.test(pairing));assert(await env.DB.prepare('SELECT code FROM pairs WHERE code=? AND expires>? AND token IS NULL').bind(pairing,now()).first(),410);}
  const state=random(),verifier=random(),nonce=random();await env.DB.prepare('INSERT INTO oauth(state,verifier,nonce,expires,pair_code) VALUES(?,?,?,?,?)').bind(await hash(state),verifier,nonce,now()+600,pairing).run();
  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(verifier)));const challenge=btoa(String.fromCharCode(...digest)).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
  const u=new URL('https://accounts.google.com/o/oauth2/v2/auth');u.search=new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID,redirect_uri:siteOrigin(req,env)+'/auth/callback',response_type:'code',scope:'openid email',state,nonce,code_challenge:challenge,code_challenge_method:'S256'}).toString();
@@ -44,7 +47,25 @@ export default {
  const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({code:url.searchParams.get('code')||'',client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET,redirect_uri:siteOrigin(req,env)+'/auth/callback',grant_type:'authorization_code',code_verifier:flow.verifier})});assert(response.ok,401);
  const tokens=await response.json();const {payload}=await jwtVerify(tokens.id_token,createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs')),{issuer:['https://accounts.google.com','accounts.google.com'],audience:env.GOOGLE_CLIENT_ID});assert(payload.nonce===flow.nonce&&payload.sub,401);
  const email=payload.email_verified===true&&typeof payload.email==='string'?payload.email:'';await env.DB.prepare('INSERT INTO accounts(owner,email) VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET email=excluded.email').bind(payload.sub,email).run();
+ if(typeof flow.pair_code==='string'&&flow.pair_code.startsWith('ios:')){
+  const nativeChallenge=flow.pair_code.slice(4);assert(/^[A-Za-z0-9_-]{43}$/.test(nativeChallenge),403);
+  const ticket=random();
+  await env.DB.prepare('INSERT INTO ios_tickets(hash,owner,challenge,expires) VALUES(?,?,?,?)').bind(await hash(ticket),payload.sub,nativeChallenge,now()+120).run();
+  return new Response(null,{status:302,headers:{Location:'seslen://auth?ticket='+ticket,'Set-Cookie':cookie('oauth','',0),'Cache-Control':'no-store'}});
+ }
  const session=random();await env.DB.prepare('INSERT INTO sessions VALUES(?,?,?,?)').bind(await hash(session),payload.sub,'browser',now()+2592000).run();return new Response(null,{status:302,headers:{Location:flow.pair_code?'/?pair='+encodeURIComponent(flow.pair_code):'/', 'Set-Cookie':cookie('session',session,2592000),'Cache-Control':'no-store'}});
+ }
+ if(path==='/api/ios/token'&&req.method==='POST'){
+ const b=await body(req);
+ assert(typeof b.ticket==='string'&&/^[a-f0-9]{64}$/.test(b.ticket),400);
+ assert(typeof b.verifier==='string'&&/^[A-Za-z0-9_-]{43,128}$/.test(b.verifier),400);
+ const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(b.verifier)));
+ const challenge=btoa(String.fromCharCode(...digest)).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
+ const grant=await env.DB.prepare('DELETE FROM ios_tickets WHERE hash=? AND challenge=? AND expires>? RETURNING owner').bind(await hash(b.ticket),challenge,now()).first();
+ assert(grant,403);
+ const session=random();
+ await env.DB.prepare('INSERT INTO sessions VALUES(?,?,?,?)').bind(await hash(session),grant.owner,'browser',now()+2592000).run();
+ return json({token:session,expiresDays:30});
  }
  if(path==='/api/pair/start'&&req.method==='POST'){
  await body(req);const code=random().slice(0,12).toUpperCase(),poll=random();await env.DB.prepare('INSERT INTO pairs VALUES(?,?,?,NULL)').bind(code,await hash(poll),now()+360).run();return json({code,poll,expires:360,url:env.ORIGIN+'/?pair='+code});
@@ -96,6 +117,6 @@ export default {
  }
  return env.ASSETS.fetch(req);
  }catch(e){return json({error:e.status===401?'Oturum gerekli':e.status===429?'Çok fazla istek':'İstek tamamlanamadı'},e.status||500);}},
- async scheduled(_event,env){await drainPush(env);const cutoff=now()-604800;await deleteOldAudio(env,cutoff);await env.DB.batch([env.DB.prepare('DELETE FROM messages WHERE created<?').bind(cutoff),env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(now()),env.DB.prepare('DELETE FROM pairs WHERE expires<?').bind(now()),env.DB.prepare('DELETE FROM oauth WHERE expires<?').bind(now()),env.DB.prepare('DELETE FROM limits WHERE expires<?').bind(now()),env.DB.prepare('DELETE FROM push_jobs WHERE created<?').bind(cutoff),env.DB.prepare('DELETE FROM push_receipts WHERE job NOT IN (SELECT id FROM push_jobs)'),env.DB.prepare('DELETE FROM push_subscriptions WHERE session_hash NOT IN (SELECT hash FROM sessions)')]);}
+ async scheduled(_event,env){await drainPush(env);const cutoff=now()-604800;await deleteOldAudio(env,cutoff);await env.DB.batch([env.DB.prepare('DELETE FROM messages WHERE created<?').bind(cutoff),env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(now()),env.DB.prepare('DELETE FROM pairs WHERE expires<?').bind(now()),env.DB.prepare('DELETE FROM oauth WHERE expires<?').bind(now()),env.DB.prepare('DELETE FROM ios_tickets WHERE expires<?').bind(now()),env.DB.prepare('DELETE FROM limits WHERE expires<?').bind(now()),env.DB.prepare('DELETE FROM push_jobs WHERE created<?').bind(cutoff),env.DB.prepare('DELETE FROM push_receipts WHERE job NOT IN (SELECT id FROM push_jobs)'),env.DB.prepare('DELETE FROM push_subscriptions WHERE session_hash NOT IN (SELECT hash FROM sessions)')]);}
 };
 
