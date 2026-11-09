@@ -2,10 +2,10 @@ const $=id=>document.getElementById(id);let recorder,parts=[],timer,busy=false,p
 let signedIn=false,pairedCode=new URLSearchParams(location.search).get('pair')||'';if(!/^[A-F0-9]{12}$/.test(pairedCode))pairedCode='';
 const notice=(t,error=false)=>{$('notice').textContent=t;$('notice').classList.toggle('error',error)};
 if(pairedCode){$('pairInvite').hidden=false;$('pairCode').textContent=pairedCode;$('login').href='/auth/login?pair='+encodeURIComponent(pairedCode);}
-function syncControls(){const ready=signedIn&&Boolean($('device').value);$('send').disabled=!ready||busy;$('record').disabled=!ready||recorder?.state==='recording';}
+function syncControls(){const ready=signedIn&&Boolean($('device').value);$('send').disabled=!ready||!$('text').value.trim()||busy;$('record').disabled=!ready||recorder?.state==='recording';}
 function mode(voice){$('textPanel').hidden=voice;$('voicePanel').hidden=!voice;for(const [id,selected] of [['textTab',!voice],['voiceTab',voice]]){$(id).classList.toggle('active',selected);$(id).setAttribute('aria-pressed',String(selected));}}
 $('textTab').onclick=()=>mode(false);$('voiceTab').onclick=()=>mode(true);
-$('device').onchange=syncControls;$('text').oninput=()=>{$('count').textContent=$('text').value.length+' / 4000'};
+$('device').onchange=syncControls;$('text').oninput=()=>{$('count').textContent=$('text').value.length+' / 4000';syncControls()};
 for(const b of document.querySelectorAll('[data-note]'))b.onclick=()=>{$('text').value=b.dataset.note;$('text').dispatchEvent(new Event('input'));$('text').focus()};
 
 async function api(path,body,raw){const r=await fetch('/api/'+path,{method:body===undefined?'GET':'POST',headers:raw?{'Content-Type':raw.type}:{'Content-Type':'application/json'},body:raw|| (body===undefined?undefined:JSON.stringify(body))});const data=await r.json();if(!r.ok){const error=Error(data.error);error.status=r.status;throw error;}return data;}

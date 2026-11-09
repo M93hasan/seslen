@@ -1,6 +1,8 @@
-# Seslen 0.2 — sunucu kurulumu
+# Seslen — sunucu kurulumu ve test durumu
 
-Seslen'e özel `seslen-staging` D1 veritabanı oluşturuldu ve 0001–0003 şemaları uygulandı. Diğer Serula/PARA veritabanları kullanılmaz. `server/wrangler.jsonc` bu test kaynağına bağlıdır. Worker henüz yayınlanmadı.
+> **Güncel doğrulama (9 Kasım 2026):** `seslen-staging` Cloudflare Worker yayımlanmış; aynı adlı özel D1'de **0001–0004** migrasyonlarının tamamı uygulanmış; `GOOGLE_CLIENT_SECRET`, `VAPID_PRIVATE_JWK` ve `VAPID_PUBLIC_KEY` Worker secrets olarak kaydedilmiş. **Bu adımları yeniden çalıştırmayın.** Gerçek Google giriş, iPhone push ve Philips TV kabul testleri ayrıca yapılmalıdır. Güncel durum: [Seslen 0.3 doğrulama](STATUS-2026-11-09.md).
+
+Aşağıdaki metin ilk kurulum ve sorun giderme için tarihsel referanstır. Diğer Serula/PARA veritabanları kullanılmaz. `server/wrangler.jsonc` yalnızca Seslen test kaynağına bağlıdır.
 
 ## R2 artık zorunlu değil
 
@@ -8,7 +10,7 @@ Varsayılan `AUDIO_BACKEND=d1`: kayıtlar özel D1 BLOB parçalarında saklanır
 
 R2 kullanılacaksa ayrıca bucket etkinleştirip oluşturun; binding `AUDIO`, vars `AUDIO_BACKEND=r2` ve 7 günlük lifecycle kuralı ekleyin. Mevcut D1 kayıtları backend değişince okunmaya devam eder. R2'yi açmak için bu sürümde işlem yapmanız gerekmiyor.
 
-## Google OAuth — kalan hesap kurulumu
+## Google OAuth — ilk kurulum referansı (mevcut secret yeniden oluşturulmaz)
 
 1. Google Cloud Console → Google Auth Platform bölümünde **Seslen** için Web application client oluşturun; gerekiyorsa onay ekranı ve test kullanıcılarını ayarlayın.
 2. Planlanan HTTPS origin: `https://seslen-staging.m93hasan.workers.dev`.
@@ -18,7 +20,7 @@ R2 kullanılacaksa ayrıca bucket etkinleştirip oluşturun; binding `AUDIO`, va
 
 Google yönetim sayfasına geliştirme ortamının tarayıcısından erişilemedi (“Site Unavailable”); bu hesap işlemi tamamlanmış sayılmıyor. Client secret olmadan giriş endpoint'i kapalı kalır; sahte giriş veya kimlik doğrulama atlama yoktur.
 
-## Arka plan görüldü bildirimi
+## Arka plan görüldü bildirimi — ilk kurulum referansı
 
 ```sh
 cd server
@@ -29,7 +31,7 @@ npx wrangler secret put VAPID_PUBLIC_KEY < .secrets/vapid-public.txt
 
 Script mevcut anahtarı korur; özel anahtar ekrana yazılmaz ve `.secrets/` Git tarafından dışlanır. Anahtarı güvende yedekleyin; anahtar değişirse iPhone'ların yeniden abone olması gerekir. Bu komutlar Worker secret yapılandırmasıdır; yayın/onay aşamasında çalıştırılmalıdır.
 
-## Yayın ve kontrol
+## Yeniden yayın ve kontrol — yalnız test sonrası onayla
 
 Kullanıcı onayından sonra `npx wrangler d1 migrations apply seslen-staging --remote` (uygulanmış migration'lar atlanır), ardından `npx wrangler deploy`. D1 migration kayıtları oluşturulmuştur. Google callback origin, ORIGIN ve gerçek yayın adresi birebir aynı olmalıdır. Test yayını için de kimlik doğrulama açık tutulur.
 
