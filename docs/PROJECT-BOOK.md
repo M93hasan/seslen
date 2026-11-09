@@ -258,3 +258,15 @@ Kullanıcının verdiği logo Android TV simgesi ve launcher afişinde kullanıl
 - Her sonraki sürümde APK dosyasını tekrar taşımamak amacıyla güvenli güncelleme denetleyicisi [PR #7](https://github.com/M93hasan/seslen/pull/7) üzerinde kodlandı; **kararlı imza ve onaylı APK dağıtımı olmadan etkin değil**.
 - Kaynak kodu \`main\` dalına kullanıcı açık onayı olmadan birleştirilmez. Canlı Worker, D1, Google secrets ve çalışan diğer ayarlar değiştirilmez; yeni bir dağıtım öncesi test ve kullanıcı onayı aranır.
 
+
+### 16.4. Google OAuth özel alan adı düzeltmesi — CANLIYA ALINDI (9 Kasım 2026)
+- Kullanıcı **yalnız Google giriş düzeltmesinin** yayınına açıkça onay verdi.
+- [PR #10](https://github.com/M93hasan/seslen/pull/10) kaynak kodu üzerindeki düzeltmeyle eşdeğer değişiklikler, Cloudflare'da zaten çalışan `seslen-staging` script'inin **mevcut dağıtılmış JavaScript modülü üzerinde dar kapsamlı** olarak uygulandı.
+- **Canlı alan adı**: https://seslen.serula.site. Cloudflare özel Worker domain bağlantısı değişmedi.
+- **Yeni Worker version**: `66c7bdcc-7040-441f-a9c4-7662974bf315`, %100 aktif; **deployment**: `afcc41b9-54bf-4393-8b2c-f37a6f1f6f6e`.
+- **Eski çalışan version** (geri alma referansı): `40018781-b734-4ad8-b658-13d4df57fe69`. Eski sürüme dönülmesi Google giriş hatasını yeniden oluşturabilir.
+- **Değişiklikler**: 2 OAuth `redirect_uri` hesaplaması, 1 çerezli POST için CSRF origin eşleştirmesi, yalnız bilinen `seslen.serula.site` ve `seslen-staging.m93hasan.workers.dev` alan adlarını kabul eden yardımcı, JSON'da UTF-8 Content-Type.
+- Worker'ın ikinci `worker.js` modülü ve içindeki web asset'ler değiştirilmedi. Mevcut D1, Google secret, VAPID ve diğer binding'ler yerinde kaldı; `ORIGIN` staging değerinde tutuldu (eski TV akışını bozmamak için).
+- [GitHub CI #42690574868](https://github.com/M93hasan/seslen/actions/runs/42690574868) başarılı. Cloudflare API üzerinden yeni çalışan modülde dört kod değişikliği ve mevcut binding'lerin korunduğu ayrıca kontrol edildi.
+- **Gerçek iPhone Safari Google oturumu henüz kullanıcı tarafından denenip doğrulanmadı.** Dışarıdan doğrudan HTTP kontrolü bu oturumun ağ ortamında yapılamadı; başarı iddiası yalnız sunucu yükleme/metadata ve kod doğrulamasına aittir.
+- **Kaynak kodundaki PR #10 hâlâ ayrı dalda:** Kullanıcı onayıyla gerçekleştirilen canlı hotfix, `main` dalını birleştirmedi. Gelecekte `develop/first-apk` veya başka eski branch'ten Worker deploy yapılırsa düzeltme kaybolabilir; sonraki yayınlar PR #10 değişikliklerini içermelidir.
