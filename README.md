@@ -1,4 +1,4 @@
-# Seslen — 0.1.0-test
+# Seslen — 0.2.0-test
 
 Philips Android TV için büyük ekran mesaj alıcısı, iPhone web göndericisi ve Cloudflare sunucusu.
 
@@ -8,7 +8,7 @@ Philips Android TV için büyük ekran mesaj alıcısı, iPhone web göndericisi
 
 - `android-tv/`: Kotlin, Android 8.0+ (API 26), target 34, compile 35; mimariden bağımsız kod; Android TV launcher.
 - `iphone/`: Safari uyumlu web göndericisi, Google giriş bağlantısı, metin, ses kaydı, durum listesi, eşleştirme ve iptal.
-- `server/`: Worker, D1 kalıcı kuyruk, özel R2 ses dosyaları; 5 saniye aralıklı HTTPS polling.
+- `server/`: Worker, D1 kalıcı kuyruk, özel D1 ses dosyaları (R2 isteğe bağlı); 5 saniye aralıklı HTTPS polling.
 - `docs/`: kurulum, Kestirmeler, yapılandırma, güvenlik ve test raporu.
 
 ## APK kurulumu — Termux
@@ -57,3 +57,10 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`. GitHub Actions `build.yml` PR 
 Özel GitHub deposu: https://github.com/M93hasan/seslen
 
 Kaynaklar `develop/first-apk` dalından Pull Request ile sunulur. GitHub Actions sonucu ayrıca doğrulanmalıdır. main'e birleştirme ve canlı yayın yapılmadı. [Kalan işler](docs/BACKLOG.md).
+
+
+## 0.2 tamamlanan düzeltmeler
+
+R2 etkinleştirmek gerekmez; özel D1 ses saklama varsayılandır. Uzun kayıtların üç tekrarı bitmeden kapanması, ses odağı alınmadan oynatma ve yavaş bağlantıda polling birikmesi düzeltildi. iPhone kayıtları göndermeden önce dinlenebilir. Ana Ekran web uygulaması için görüldü push kodu eklendi; Google/VAPID kurulumu ve gerçek cihaz testleri henüz yapılmadı.
+
+Test D1 kaynağı hazırdır. Planlanan adres `https://seslen-staging.m93hasan.workers.dev`; henüz yayınlanmış uygulama adresi olarak kullanılmamalıdır. Hesap kurulumu ve yayın adımları `docs/CLOUDFLARE.md` içindedir.

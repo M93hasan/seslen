@@ -1,0 +1,2 @@
+self.addEventListener('push',event=>{event.waitUntil(self.registration.showNotification('Mesaj görüldü',{body:'Televizyondaki bir mesaj kumandadan onaylandı.',tag:'seslen-seen',icon:'/icon.svg',data:{url:'/'}}));});
+self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil((async()=>{const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});if(windows.length){await windows[0].focus();await windows[0].navigate('/');}else await self.clients.openWindow('/');})());});

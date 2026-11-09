@@ -26,3 +26,12 @@ Bu belge geliştirme sırasında yapılan iç incelemedir; bağımsız güvenlik
 - Android boot/foreground ve overlay politikaları üretici/OS sürümüne göre değişir. Servis özel kullanım (specialUse) olarak bildirilir; Play Store yayını hedeflenmedi ve mağaza incelemesi yapılmadı.
 - R2 lifecycle kuralı ayrıca kurulmalıdır. Günlük cleanup tek başına yükleme ile SQL yazımı arasındaki sahipsiz objeleri bulamaz.
 - TV/medya aniden kapanırsa oynatma kaldığı saniyeden devam etmez; mesaj yeniden başlatılabilir. Kesinti boyunca fiziksel seslendirmeye “tam olarak bir kez” garantisi yoktur. Ağ polling tekrarları aynı local kuyruğu çoğaltmaz.
+
+
+## 0.2 güvenlik güncellemesi
+
+Önceki eksiklerden depolama/gönderim kotaları uygulanmıştır: 5 MiB kayıt, 20 MiB/kullanıcı, toplam 100 MiB, 100 ses yükleme/gün ve 500 mesaj/gün. Rezervasyonlar kota hesabına dahildir; yarım kalan D1 yüklemeleri erişime açılmaz, başarısız yazımlar temizlenir. Eski R2 kayıtları backend bilgisiyle okunur; D1 seçeneği public depolama gerektirmez.
+
+Push aboneliği yalnız browser rolünde ve aktif oturuma bağlıdır; oturum sonu/iptali sonrasında gönderim engellenir. HTTPS Apple/Google/Mozilla push host allowlist, redirect engeli ve 10 saniye timeout uygulanır. VAPID ES256 imzası ve endpoint audience/expiry kullanılır. Push gövdesi boş olduğundan mesaj içeriği sağlayıcıya aktarılmaz; endpoint adresi sağlayıcı erişim bilgisidir ve D1'de özel tutulur. Başarılı aboneliklerin kaydı yeniden denemede tekrar gönderilmez; HTTP 404/410 aboneliği kaldırır. Sağlayıcının ilk başarılı cevabı ağda kaybolursa mükerrer OS bildirimi ihtimali sıfırlanamaz; sabit notification tag'i aynı bildirimi günceller.
+
+Gerçek OAuth/push sağlayıcısı testleri ve bağımsız denetim yapılmadı. Bu değişiklikler kararlı sürüm onayı veya uçtan uca başarı iddiası değildir.

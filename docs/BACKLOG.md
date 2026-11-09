@@ -14,3 +14,17 @@ Kaynak aktarımı tamamlandı: [PR #1](https://github.com/M93hasan/seslen/pull/1
 - [ ] Ses/mikrofon erişiminde hata deneyimini iyileştir; çevrimdışı iPhone gönderim outbox'ı ve kullanıcı kontrollü ses önizleme ekle.
 - [ ] Yayın öncesi bağımsız güvenlik incelemesi, kullanıcı bazında toplam mesaj/ses kota sınırı ve ek spam koruması.
 - [ ] Kalıcı APK release imzası ve GitHub production reviewer koruması; onaydan sonra stable tag ve Release.
+
+
+## 0.2 güncellemesi
+
+- [x] R2 zorunluluğunu kaldıran, erişim kontrollü D1 ses backend'i ve migration.
+- [x] Ses boyutu/depolama/günlük yükleme ve mesaj kotaları.
+- [x] iPhone kayıt önizlemesi ve ayrı gönderme düğmesi.
+- [x] Görüldü Web Push kaynak kodu, PWA/service worker, VAPID ve kalıcı tekrar kuyruğu.
+- [x] Uzun ses/metin üç tekrar bitmeden kapanmaz; odak verilmezse ses başlamaz; bitişte kuyruk/outbox tek yazımda kaydedilir.
+- [x] Seslen'e özel test D1 ve 0001–0003 migration'ları hazır.
+- [ ] Google OAuth hesap kurulumu: yönetim sayfasına bu ortamdan erişilemiyor.
+- [ ] Google/VAPID secrets ile onaylı test yayını ve gerçek cihaz kabul testleri.
+
+Yukarıdaki önceki maddeler içinde R2 gerekliliği ve “push kodu yok” notları bu güncellemeyle aşılmıştır. Kodun bulunması gerçek TV/iPhone testinin geçtiği anlamına gelmez.

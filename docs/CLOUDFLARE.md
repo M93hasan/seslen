@@ -1,18 +1,38 @@
-# Cloudflare ve Google yapılandırması
+# Seslen 0.2 — sunucu kurulumu
 
-Canlı yayın kullanıcı onayından sonra yapılmalıdır. Aşağıdaki komutlar hazırlanmıştır; bu teslimatta uzak kaynak oluşturulmadı ve deploy yapılmadı.
+Seslen'e özel `seslen-staging` D1 veritabanı oluşturuldu ve 0001–0003 şemaları uygulandı. Diğer Serula/PARA veritabanları kullanılmaz. `server/wrangler.jsonc` bu test kaynağına bağlıdır. Worker henüz yayınlanmadı.
 
-1. Cloudflare hesabınızda Workers, D1 ve R2 kullanılabilir olmalı. R2 hesap etkinleştirmesi/ücret bilgileri gerekebilir; herhangi bir ödeme veya kaynak bu oturumda açılmadı.
-2. Bilgisayarda Node 24 kurun, `server` klasöründe `npm ci` ve `npx wrangler login` çalıştırın.
-3. `npx wrangler d1 create seslen` çalıştırın. Dönen database_id değerini `wrangler.jsonc` içindeki yer tutucuya yazın.
-4. `npx wrangler r2 bucket create seslen-audio`. Bucket'ı public yapmayın, `r2.dev` public erişimini açmayın.
-5. Google Cloud Console → Google Auth Platform: OAuth consent ekranı, gerekiyorsa test kullanıcıları, Web application OAuth client oluşturun. Redirect URI tam olarak `https://SIZIN_ADRESINIZ/auth/callback` olmalı. Ayrı Google TV OAuth akışı gerekmiyor; TV tek kullanımlık kodla eşleşir. Google hesabının `sub` kimliği sahiplik için kullanılır; e-posta adresi DB'ye kaydedilmez.
-6. `wrangler.jsonc`: ORIGIN gerçek HTTPS origin (sonunda / yok), GOOGLE_CLIENT_ID gerçek client ID. Client secret için `npx wrangler secret put GOOGLE_CLIENT_SECRET` kullanın. Secret'i Git'e veya sohbete yazmayın.
-7. Onaylı ortamda `npx wrangler d1 migrations apply seslen --remote`, ardından `npx wrangler deploy`. Alan adını bağlayın. İlk denemeyi test domaininde yapın. Domain/Google redirect/ORIGIN birebir aynı olmalıdır.
-8. iPhone Safari'de adresi açın, Google ile giriş yapın. TV'ye aynı HTTPS adresini kaydedin. TV kodunu web'deki eşleştirme bölümüne yazın. TV “Eşleştirildi” dedikten sonra alıcıyı başlatın.
+## R2 artık zorunlu değil
 
-Yerel kontroller: `npm test`, `npm run check`. `npx wrangler d1 migrations apply seslen --local` ve `npx wrangler dev` ile yerel runtime kontrol edilebilir. Gerçek Google callback için HTTPS test domaini gerekir. TV uygulaması HTTP kabul etmez.
+Varsayılan `AUDIO_BACKEND=d1`: kayıtlar özel D1 BLOB parçalarında saklanır. Tek kayıt 5 MiB, kullanıcı başına 20 MiB, toplam 100 MiB ve kullanıcı başına günde 100 ses yükleme sınırı vardır. Mesaj gönderimi kullanıcı başına günde 500 ile sınırlıdır. Erişim yetkileri aynı kalır; dosyalar public değildir. Kayıtlar 7 gün sonra temizlenir. D1 kullanım kotaları yine geçerlidir; sınırsız kullanım/ücretsiz çalışma garantisi verilmez.
 
-Mesajlar D1'de kalır; TV beş saniyede bir kuyruk kontrol eder. “Teslim edildi” yalnız overlay başarıyla eklendikten sonra bildirilir. OK “seen”; süre dolması “finished” (arayüzde teslim edildi); medya hatası “failed” üretir. İşlenmiş mesajlar tekrar inbox'a dönmez. Benzersiz gönderim anahtarı tekrar POST'u çoğaltmaz; farklı içerikle aynı anahtar 409 döndürür.
+R2 kullanılacaksa ayrıca bucket etkinleştirip oluşturun; binding `AUDIO`, vars `AUDIO_BACKEND=r2` ve 7 günlük lifecycle kuralı ekleyin. Mevcut D1 kayıtları backend değişince okunmaya devam eder. R2'yi açmak için bu sürümde işlem yapmanız gerekmiyor.
 
-Saat 03:17 UTC günlük temizleme görevi 7 günden eski mesajları ve ses kayıtlarını siler. 500'den fazla eski ses varsa kalanlar sonraki günlük turda silinir; ayrıca R2 lifecycle için 7 günlük silme kuralı kurun. Böylece R2 yükleme ve D1 kayıt hatası arasındaki sahipsiz dosyalar da silinir. Ses indirme ve inbox sorguları da 7 günlük sınırı uygular. Loglarda request body/cookie/Authorization yakalama açılmamalıdır.
+## Google OAuth — kalan hesap kurulumu
+
+1. Google Cloud Console → Google Auth Platform bölümünde **Seslen** için Web application client oluşturun; gerekiyorsa onay ekranı ve test kullanıcılarını ayarlayın.
+2. Planlanan HTTPS origin: `https://seslen-staging.m93hasan.workers.dev`.
+3. Redirect URI: `https://seslen-staging.m93hasan.workers.dev/auth/callback`.
+4. `wrangler.jsonc` içindeki `GOOGLE_CLIENT_ID` yer tutucusunu client ID ile değiştirin.
+5. `cd server`, `npm ci`, `npx wrangler login`, `npx wrangler secret put GOOGLE_CLIENT_SECRET`. Secret'i Git'e veya sohbete yazmayın.
+
+Google yönetim sayfasına geliştirme ortamının tarayıcısından erişilemedi (“Site Unavailable”); bu hesap işlemi tamamlanmış sayılmıyor. Client secret olmadan giriş endpoint'i kapalı kalır; sahte giriş veya kimlik doğrulama atlama yoktur.
+
+## Arka plan görüldü bildirimi
+
+```sh
+cd server
+node scripts/prepare-vapid.mjs
+npx wrangler secret put VAPID_PRIVATE_JWK < .secrets/vapid-private.json
+npx wrangler secret put VAPID_PUBLIC_KEY < .secrets/vapid-public.txt
+```
+
+Script mevcut anahtarı korur; özel anahtar ekrana yazılmaz ve `.secrets/` Git tarafından dışlanır. Anahtarı güvende yedekleyin; anahtar değişirse iPhone'ların yeniden abone olması gerekir. Bu komutlar Worker secret yapılandırmasıdır; yayın/onay aşamasında çalıştırılmalıdır.
+
+## Yayın ve kontrol
+
+Kullanıcı onayından sonra `npx wrangler d1 migrations apply seslen-staging --remote` (uygulanmış migration'lar atlanır), ardından `npx wrangler deploy`. D1 migration kayıtları oluşturulmuştur. Google callback origin, ORIGIN ve gerçek yayın adresi birebir aynı olmalıdır. Test yayını için de kimlik doğrulama açık tutulur.
+
+`npm test` API, kotalar, erişim denetimi, push kuyruğu, kriptografik VAPID ve tekrar denemeleri test eder. `npm run check` Worker bundle dry-run'dır; yayın değildir. Gerçek Google, push sağlayıcısı, mobil internet ve Philips TV testleri ayrıca gerekir.
+
+TV beş saniyede bir kuyruk kontrol eder; mesajlar 7 güne kadar saklanır. Görüntüleme “Teslim edildi”, yalnız kumanda onayı “Görüldü” üretir. Push bildiriminde mesaj içeriği bulunmaz. Kalıcı bildirim kuyruğu ve geri çekilerek 5 deneme vardır; sağlayıcıya kabul, telefonda görünme garantisi değildir. Her dakikada işlenen sınırlı kuyruk/temizleme cron'u vardır.

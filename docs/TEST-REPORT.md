@@ -1,3 +1,13 @@
+# Seslen 0.2 — geliştirme doğrulaması
+
+15 sunucu testi ve Worker dry-run yerelde geçti. Yeni kapsam: R2 olmadan D1 parçalı ses, erişim denetimi, kota/yarım yükleme temizliği, görülme başına tek push işi, izin/endpoint SSRF denetimi, ES256 VAPID doğrulaması ve başarılı telefona tekrar göndermeyen push retry kaydı. TV için 3 ek DisplayLifetime testi eklendi; toplam 8 Android birim testi CI'da doğrulanacak.
+
+Seslen'e özel Cloudflare D1 oluşturuldu, 3 migration 23 statement olarak başarıyla uygulandı. Worker yayınlanmadı. Google yönetim sayfası bu ortamda “Site Unavailable” döndürüyor; OAuth kurulumu ve gerçek hesap/TV/iPhone/Web Push uçtan uca testleri tamamlanmış değildir. R2 etkinleştirmesi artık gerekli değildir. Otomatik uyandırma, imzalı Apple shortcut dosyası ve kalıcı release imzası önceki sınırlamalardır.
+
+Aşağıdaki önceki 0.1 sonuçları tarihsel kayıttır; 0.2 APK hash'i olarak kullanılmamalıdır.
+
+---
+
 # Seslen 0.1.0-test — Test raporu
 
 Tarih: 9 Kasım 2026 (Türkiye).
@@ -48,3 +58,4 @@ Lint uyarıları Türkçe sabit arayüz metinleri, bilinçli senkron kuyruk kayd
 Özel depo ve [PR #1](https://github.com/M93hasan/seslen/pull/1) oluşturuldu. GitHub sunucu testleri ve Worker dry-run başarılı. İlk Android işi SDK kurulumunda artık bulunmayan `tools` paketi yüzünden başarısız oldu. CI ve release iş akışları `platform-tools platforms;android-35 build-tools;35.0.0` paketlerini açıkça kuracak şekilde düzeltildi; [yeni çalışma](https://github.com/M93hasan/seslen/actions/runs/42533789874) başlatıldı. Nihai sonuç ve artifact bağlantısı [Issue #2](https://github.com/M93hasan/seslen/issues/2) üzerinde takip edilir.
 
 Cloudflare hesabı kontrol edildi: R2 etkin değil (API 10042). Google OAuth ve sunucu yayını hazırlanmış koddan ayrı kurulum adımlarıdır; [Issue #3](https://github.com/M93hasan/seslen/issues/3). Gerçek cihaz testleri ve canlı yayın yapılmadı; main değiştirilmedi. Yukarıdaki APK hash'i ilk yerel teslimata aittir; Actions APK'sı farklı debug imzası/hash içerebilir.
+

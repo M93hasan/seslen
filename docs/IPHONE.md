@@ -37,3 +37,22 @@ Birinci kestirmeyi çoğaltın; ilk adımı **Metni Dikte Et** (Türkçe) olarak
 6. Sonucu gösterin.
 
 Bu teslimat imzalı `.shortcut` / iCloud kurulum bağlantısı içermez; Apple cihazında bu adımlarla oluşturulmalıdır. Kestirmeler ve Siri gerçek iPhone'da henüz doğrulanmadı. Web ekranındaki durum listesi beş saniyede yenilenir. Safari kapalıyken “görüldü” için arka plan push bildirimi bu sürümde yoktur; bu özellik ayrı iştir. Görüldü durumunu web'i açarak veya GET `/api/messages` isteğiyle kontrol edebilirsiniz.
+
+
+## 0.2 güncellemesi: kayıt önizleme ve arka plan bildirimi
+
+Önceki sürümün otomatik ses gönderme davranışı değişti: **Ses kaydet → Kaydı bitir → dinle → Dinlediğim ses kaydını gönder**. Ses kaydı bitince kendiliğinden gönderilmez.
+
+Arka plan “Görüldü” bildirimi kodu eklendi. Sunucu Google/VAPID yapılandırması ve yayın tamamlandıktan sonra:
+
+1. Safari'de Seslen'i açıp Google hesabınızla giriş yapın.
+2. Paylaş → Ana Ekrana Ekle. Ana ekrandaki Seslen ikonundan açın.
+3. Bu uygulama penceresinde gerekiyorsa Google ile yeniden giriş yapın.
+4. Bağlantı ve güvenlik → **Görüldü bildirimlerini aç** → izin verin.
+5. TV'de bir mesajı OK ile onaylayın; iPhone'a “Mesaj görüldü” bildirimi gelmelidir. Bildirime dokununca kimlik doğrulamalı mesaj geçmişi açılır.
+
+iOS 16.4+ Ana Ekran web uygulaması ve kullanıcı tarafından verilen bildirim izni gerekir. Gerçek iPhone/push sağlayıcısı henüz test edilmedi. Bildirim sağlayıcıları Apple/Google/Mozilla ile sınırlıdır; telefon çevrimdışıysa sağlayıcı teslimi geciktirebilir. Çıkış yapınca ilgili oturumun sunucu push abonelikleri kaldırılır. “Bu cihazın bildirimlerini kapat” ile ayrıca iptal edebilirsiniz.
+
+Bu bölüm önceki “arka plan push yok” notunun yerini alır. İmzalı Apple `.shortcut` dosyası hâlâ üretilmedi; yukarıdaki Kestirmeler adımları kullanılabilir.
+
+Kaynak: https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/

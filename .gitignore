@@ -6,3 +6,6 @@ local.properties
 node_modules/
 .wrangler/
 .dev.vars
+
+
+.secrets/
