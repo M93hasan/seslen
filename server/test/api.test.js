@@ -24,3 +24,43 @@ test('failed D1 chunk writes release reservation and do not expose partial audio
 
 test('QR handoff uses canonical origin, preserves OAuth pairing, rejects expired or injected targets',async()=>{const {env,sql}=setup();env.GOOGLE_CLIENT_ID='test.apps.googleusercontent.com';env.GOOGLE_CLIENT_SECRET='test';const p=await (await call(env,'/api/pair/start',{})).json();assert.equal(p.url,env.ORIGIN+'/?pair='+p.code);const response=await call(env,'/auth/login?pair='+p.code);assert.equal(response.status,302);const target=new URL(response.headers.get('Location'));assert.equal(target.hostname,'accounts.google.com');assert.equal(target.searchParams.get('redirect_uri'),env.ORIGIN+'/auth/callback');assert.equal(sql.prepare('SELECT pair_code FROM oauth').get().pair_code,p.code);assert.equal((await call(env,'/auth/login?pair=https://evil.example')).status,400);sql.exec('UPDATE pairs SET expires=0');assert.equal((await call(env,'/auth/login?pair='+p.code)).status,410)});
 test('account identity remains scoped and TV pairing returns only its linked account',async()=>{const {env,sql}=setup();sql.prepare('INSERT INTO accounts VALUES(?,?)').run('one','one@example.test');sql.prepare('INSERT INTO accounts VALUES(?,?)').run('two','two@example.test');await seed(env,'browser','one','browser');await seed(env,'other','two','browser');assert.equal((await call(env,'/api/account')).status,401);assert.equal((await (await call(env,'/api/account',undefined,'other')).json()).email,'two@example.test');const p=await (await call(env,'/api/pair/start',{})).json();await call(env,'/api/pair/confirm',{code:p.code,name:'Salon'},'browser');const result=await (await call(env,'/api/pair/poll',{poll:p.poll})).json();assert.equal(result.email,'one@example.test');assert.equal((await (await call(env,'/api/account',undefined,result.token)).json()).email,'one@example.test');assert.deepEqual(await (await call(env,'/api/pair/poll',{poll:p.poll})).json(),{waiting:true});assert.equal((await call(env,'/api/pair/confirm',{code:p.code},'other')).status,409)});
+
+
+test('Seslen custom-domain login keeps OAuth callback on the same hostname',async()=>{
+ const {env}=setup();
+ env.ORIGIN='https://seslen-staging.m93hasan.workers.dev';
+ env.GOOGLE_CLIENT_ID='test.apps.googleusercontent.com';
+ env.GOOGLE_CLIENT_SECRET='test-secret';
+ const response=await worker.fetch(new Request('https://seslen.serula.site/auth/login'),env);
+ assert.equal(response.status,302);
+ const location=new URL(response.headers.get('Location'));
+ assert.equal(location.hostname,'accounts.google.com');
+ assert.equal(location.searchParams.get('redirect_uri'),'https://seslen.serula.site/auth/callback');
+ assert.match(response.headers.get('Set-Cookie'),/^oauth=/);
+ const forbidden=await worker.fetch(new Request('https://evil.example/auth/login'),env);
+ assert.equal(forbidden.status,403);
+});
+
+test('Seslen legacy TV staging OAuth continues to use its own callback',async()=>{
+ const {env}=setup();
+ env.ORIGIN='https://seslen-staging.m93hasan.workers.dev';
+ env.GOOGLE_CLIENT_ID='test.apps.googleusercontent.com';
+ env.GOOGLE_CLIENT_SECRET='test-secret';
+ const response=await worker.fetch(new Request('https://seslen-staging.m93hasan.workers.dev/auth/login'),env);
+ assert.equal(response.status,302);
+ const location=new URL(response.headers.get('Location'));
+ assert.equal(location.searchParams.get('redirect_uri'),'https://seslen-staging.m93hasan.workers.dev/auth/callback');
+});
+
+test('browser cookie mutations allow only matching request origin, not foreign origin',async()=>{
+ const {env}=setup();
+ env.ORIGIN='https://seslen-staging.m93hasan.workers.dev';
+ await seed(env,'browser','one','browser');
+ const make=(host,origin)=>worker.fetch(new Request(host+'/api/revoke-senders',{
+  method:'POST',headers:{Cookie:'session=browser',Origin:origin,'Content-Type':'application/json'},body:'{}'
+ }),env);
+ assert.equal((await make('https://seslen.serula.site','https://seslen.serula.site')).status,200);
+ assert.equal((await make('https://seslen.serula.site','https://evil.example')).status,403);
+ assert.equal((await make('https://seslen-staging.m93hasan.workers.dev','https://seslen.serula.site')).status,403);
+ assert.equal((await make('https://evil.example','https://evil.example')).status,403);
+});
