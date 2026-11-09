@@ -270,3 +270,27 @@ Kullanıcının verdiği logo Android TV simgesi ve launcher afişinde kullanıl
 - [GitHub CI #42690574868](https://github.com/M93hasan/seslen/actions/runs/42690574868) başarılı. Cloudflare API üzerinden yeni çalışan modülde dört kod değişikliği ve mevcut binding'lerin korunduğu ayrıca kontrol edildi.
 - **Gerçek iPhone Safari Google oturumu henüz kullanıcı tarafından denenip doğrulanmadı.** Dışarıdan doğrudan HTTP kontrolü bu oturumun ağ ortamında yapılamadı; başarı iddiası yalnız sunucu yükleme/metadata ve kod doğrulamasına aittir.
 - **Kaynak kodundaki PR #10 hâlâ ayrı dalda:** Kullanıcı onayıyla gerçekleştirilen canlı hotfix, `main` dalını birleştirmedi. Gelecekte `develop/first-apk` veya başka eski branch'ten Worker deploy yapılırsa düzeltme kaybolabilir; sonraki yayınlar PR #10 değişikliklerini içermelidir.
+
+
+## 17. Yerel iOS Seslen uygulaması — 9 Kasım 2026
+
+Kullanıcı, son Seslen Android TV APK'sından sonra **aynı sistem için iPhone/iOS uygulaması** istedi. APK iPhone üzerinde çalıştırılmaz: TV mevcut alıcı, iOS ise native SwiftUI gönderici olarak ayrı uygulamadır.
+
+### Yapılan ve doğrulananlar
+- [Taslak PR #11](https://github.com/M93hasan/seslen/pull/11) ve feat/ios-native-seslen-sender dalı açıldı. **Main'e kod birleştirilmedi ve canlı Worker/D1 değiştirilmedi.**
+- SwiftUI: Google giriş, Keychain'de oturum, TV seçimi, QR/kod ile eşleştirme, Türkçe mesaj gönderme, 60 saniye M4A ses kaydı/önizleme/gönderme, son mesajların beklemede/teslim edildi/görüldü durumları, çıkış.
+- Kullanıcının daha önce gönderdiği Seslen logosu iPhone uygulaması simgesi ve welcome alanı için kullanıldı.
+- Native Google girişi için ASWebAuthenticationSession + PKCE ile /auth/ios/login ve /api/ios/token uç noktaları kodlandı. Mevcut Google Web OAuth client'ı ve izinli HTTPS callback kullanılır. Sunucu yeni kısa ömürlü **tek kullanımlık** ios_tickets tablosunda yalnız ticket hash'i saklar; migration: server/migrations/0005_ios_native.sql. **Yeni API henüz sunucuda etkin değil.**
+- [GitHub iOS macOS CI #42697312730](https://github.com/M93hasan/seslen/actions/runs/42697312730): Simulator derlemesi ve **imzasız iPhoneOS cihaz uygulaması/IPA** başarılı. [GitHub Android ve sunucu CI #42697313173](https://github.com/M93hasan/seslen/actions/runs/42697313173): başarılı.
+- Kullanıcıya özel test IPA'sı: Seslen-iOS-0.1.0-IMZASIZ.ipa (yaklaşık 1,67 MB). Bu **imzasız geliştirme paketidir, stock iPhone'da doğrudan yüklenemez**. İmzalama ve native sunucu uç noktaları tamamlanmadan çalışan iOS sürümü olarak sunulmaz.
+- [iOS kurulum, Apple imzası, eksikler ve güvenlik belgesi](https://github.com/M93hasan/seslen/blob/feat/ios-native-seslen-sender/ios/README.md).
+
+### Kalan ve kesin ayrımlar
+- [ ] Gerçek iPhone'a kurulabilir Apple imzalı IPA/TestFlight/App Store için geliştirici Team, provisioning ve imza.
+- [ ] Kullanıcının açık onayıyla yeni D1 migration ve iOS OAuth yollarının güvenli yayımlanması; önceki Google Web redirect_uri_mismatch hatası düzeltildiği gerçek Google giriş denemesiyle doğrulanmalı.
+- [ ] Gerçek iPhone'da QR kamera, mikrofon, Google giriş, ses, TV mesajı üç tekrar/OK ve geçmiş testi.
+- [ ] iOS APNs arka plan bildirimleri ve tam Siri App Intents isteğe bağlı ayrı işlerdir; henüz tamamlandı denmez.
+- [ ] Seslen web tasarımının yalnız görünüm iyileştirmesi ayrı çalışma dalında kalır.
+
+**Hemen kullanılabilen alternatif:** iPhone Safari'de https://seslen.serula.site → Paylaş → Ana Ekrana Ekle ile mevcut PWA. Native iOS uygulamasıyla karıştırılmaz.
+
