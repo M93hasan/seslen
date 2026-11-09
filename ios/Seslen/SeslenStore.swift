@@ -107,8 +107,8 @@ final class SeslenStore: ObservableObject {
         }
     }
 
-    func sendVoice(fileURL: URL) async {
-        guard let token, !selectedDeviceID.isEmpty, !isBusy else { return }
+    func sendVoice(fileURL: URL) async -> Bool {
+        guard let token, !selectedDeviceID.isEmpty, !isBusy else { return false }
         isBusy = true
         defer { isBusy = false }
         do {
@@ -123,8 +123,10 @@ final class SeslenStore: ObservableObject {
             )
             notice = "Sesli mesaj gönderildi. Televizyona ulaşması bekleniyor."
             await refreshMessages()
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 
