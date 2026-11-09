@@ -130,13 +130,23 @@ struct ContentView: View {
                     RoundedRectangle(cornerRadius: 42)
                         .fill(SeslenPalette.mint)
                         .frame(height: 220)
-                    VStack(spacing: 14) {
-                        Image(systemName: "tv.and.mediabox")
-                            .font(.system(size: 66, weight: .thin))
-                            .foregroundStyle(SeslenPalette.green)
-                        Image(systemName: "waveform")
-                            .font(.system(size: 30, weight: .medium))
-                            .foregroundStyle(SeslenPalette.orange)
+                    if let file = Bundle.main.url(forResource: "SeslenLogo", withExtension: "webp"),
+                       let bytes = try? Data(contentsOf: file),
+                       let logo = UIImage(data: bytes) {
+                        Image(uiImage: logo)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 188, height: 188)
+                            .accessibilityLabel("Seslen uygulama logosu")
+                    } else {
+                        VStack(spacing: 14) {
+                            Image(systemName: "tv.and.mediabox")
+                                .font(.system(size: 66, weight: .thin))
+                                .foregroundStyle(SeslenPalette.green)
+                            Image(systemName: "waveform")
+                                .font(.system(size: 30, weight: .medium))
+                                .foregroundStyle(SeslenPalette.orange)
+                        }
                     }
                 }
                 Text("BİR SES KADAR YAKIN")
