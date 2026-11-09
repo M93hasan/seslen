@@ -58,11 +58,11 @@ class MessageService:Service(),TextToSpeech.OnInitListener {
  private fun next(){if(stopped)return;if(current!=null||view!=null)return;val a=read("inbox");if(a.length()==0)return
  if(!Settings.canDrawOverlays(this))return
  lifetime=DisplayLifetime();current=a.getJSONObject(0);cycle=RepeatCycle(p.getInt("repeat",3).coerceIn(1,10));generation++
- val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(35,25,35,25);setBackgroundColor(Color.rgb(15,30,48));isFocusableInTouchMode=true}
- box.addView(TextView(this).apply{text="SESLEN";textSize=20f;setTextColor(Color.rgb(90,235,195))})
+ val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(35,25,35,25);background=android.graphics.drawable.GradientDrawable().apply{setColor(Color.rgb(21,45,34));cornerRadius=28f};isFocusableInTouchMode=true}
+ box.addView(TextView(this).apply{text="SESLEN · SANA BİR MESAJ VAR";textSize=20f;setTextColor(Color.rgb(204,225,168))})
  val scroll=ScrollView(this);scroll.addView(TextView(this).apply{text=current!!.optString("text","Sesli mesaj");textSize=p.getInt("size",42).toFloat();setTextColor(Color.WHITE);setPadding(10,20,10,20)})
  box.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
- val ok=Button(this).apply{text="OK • Gördüm, kapat";setOnClickListener{finish("seen")}};box.addView(ok)
+ val ok=Button(this).apply{text="OK · Mesajı gördüm";setOnClickListener{finish("seen")}};box.addView(ok)
  box.setOnKeyListener{_,key,event->if((key==KeyEvent.KEYCODE_DPAD_CENTER||key==KeyEvent.KEYCODE_ENTER)&&event.action==KeyEvent.ACTION_UP){finish("seen");true}else false}
  val full=p.getBoolean("full",false);val width=if(full)-1 else (resources.displayMetrics.widthPixels*0.85).toInt();val height=if(full)-1 else (resources.displayMetrics.heightPixels*0.80).toInt()
  try{wm.addView(box,WindowManager.LayoutParams(width,height,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,android.graphics.PixelFormat.TRANSLUCENT).apply{gravity=Gravity.CENTER});view=box;ok.requestFocus()}catch(e:Exception){current=null;return}

@@ -64,3 +64,7 @@ Kaynaklar `develop/first-apk` dalından Pull Request ile sunulur. GitHub Actions
 R2 etkinleştirmek gerekmez; özel D1 ses saklama varsayılandır. Uzun kayıtların üç tekrarı bitmeden kapanması, ses odağı alınmadan oynatma ve yavaş bağlantıda polling birikmesi düzeltildi. iPhone kayıtları göndermeden önce dinlenebilir. Ana Ekran web uygulaması için görüldü push kodu eklendi; Google/VAPID kurulumu ve gerçek cihaz testleri henüz yapılmadı.
 
 Test D1 kaynağı hazırdır. Planlanan adres `https://seslen-staging.m93hasan.workers.dev`; henüz yayınlanmış uygulama adresi olarak kullanılmamalıdır. Hesap kurulumu ve yayın adımları `docs/CLOUDFLARE.md` içindedir.
+
+## 0.3 Google hesabıyla bağlantı ve yeni arayüz
+
+TV artık sunucu adresiyle hazır gelir. QR ile telefondaki Google hesabında onay verilir; kod yazmadan aynı hesaba bağlanır. Web paneli ve TV kumanda ekranı yenilendi. Ayrıntılar: [ACCOUNT-CONNECT](docs/ACCOUNT-CONNECT.md). Bu, TV sistem hesabı seçicisi değildir; Google girişi telefonda yapılır.
