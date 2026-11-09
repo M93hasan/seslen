@@ -35,7 +35,7 @@ class MessageService:Service(),TextToSpeech.OnInitListener {
  val nm=getSystemService(NotificationManager::class.java);nm.createNotificationChannel(NotificationChannel("receiver","Seslen alıcısı",NotificationManager.IMPORTANCE_LOW))
  val pi=PendingIntent.getActivity(this,0,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)
  startForeground(1,Notification.Builder(this,"receiver").setSmallIcon(android.R.drawable.ic_dialog_email).setContentTitle("Seslen mesaj bekliyor").setContentText("Alıcı etkin • ayarlar için açın").setContentIntent(pi).build())
- tts=TextToSpeech(this,this);h.post(poll)
+ tts=TextToSpeech(this,this);h.post(poll);h.postDelayed(checkForUpdates,60000L)
  }
  override fun onInit(status:Int){ready=status==TextToSpeech.SUCCESS&&tts.setLanguage(Locale.forLanguageTag("tr-TR"))>=0
  tts.setOnUtteranceProgressListener(object:UtteranceProgressListener(){override fun onStart(id:String?){};override fun onDone(id:String?){h.post{if(id==generation.toString())again()}};@Deprecated("API") override fun onError(id:String?){h.post{if(id==generation.toString())fail()}}})
@@ -45,6 +45,17 @@ class MessageService:Service(),TextToSpeech.OnInitListener {
  private fun read(key:String)=JSONArray(p.getString(key,"[]"))
  private fun write(key:String,a:JSONArray){p.edit().putString(key,a.toString()).commit()}
  @Synchronized private fun enqueue(m:JSONObject){val a=read("inbox");val done=read("outbox");if((0 until a.length()).any{a.getJSONObject(it).getString("id")==m.getString("id")}||(0 until done.length()).any{done.getJSONObject(it).getString("id")==m.getString("id")})return;a.put(m);write("inbox",a)}
+ // Passive update discovery only. Never installs or changes user settings in the background.
+ private val checkForUpdates=object:Runnable{override fun run(){
+  if(stopped)return
+  io.execute{
+   try{
+    val release=UpdateClient.findUpdate(this@MessageService)
+    if(release!=null)UpdateClient.notifyAvailable(this@MessageService,release)
+   }catch(_:Exception){/* Offline is normal; try again later. */}
+  }
+  h.postDelayed(this,6L*60L*60L*1000L)
+ }}
  private val poll=object:Runnable{override fun run(){if(stopped)return
  val base=p.getString("base","")!!;val token=Vault(this@MessageService).token()
  if(token.isNotEmpty()&&base.isNotEmpty()&&polling.compareAndSet(false,true))io.execute{try{

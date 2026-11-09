@@ -5,6 +5,11 @@ on:
       version:
         description: Approved existing tag on main (for example v1.0.0)
         required: true
+      publish_tv_update:
+        description: 'After production approval, publish direct APK and manifest to Seslen Cloudflare?'
+        required: true
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -41,8 +46,21 @@ jobs:
           printf '%s' "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$RUNNER_TEMP/release.jks" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --ks-key-alias "$KEY_ALIAS" --out seslen.apk android-tv/app/build/outputs/apk/release/app-release-unsigned.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify seslen.apk
+      - name: Stage directly downloadable signed TV APK and manifest
+        run: node server/scripts/stage-tv-update.mjs "$GITHUB_WORKSPACE/seslen.apk"
       - name: Publish approved release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.version }}
         run: gh release create "$RELEASE_TAG" seslen.apk --verify-tag --generate-notes
+      - name: Publish TV update to Seslen Cloudflare (explicit opt-in)
+        if: ${{ inputs.publish_tv_update }}
+        working-directory: server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npm ci
+          npx wrangler deploy
