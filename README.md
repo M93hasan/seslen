@@ -1,8 +1,17 @@
 # SESLEN — iPhone'dan Android TV'ye sesli ve yazılı mesaj
 
+## 📥 Android TV APK — GitHub'dan doğrudan indir
+
+**[Seslen 0.4.1 APK indir (ZIP değil, doğrudan APK)](https://github.com/M93hasan/seslen/releases/download/v0.4.1-test-20261110/Seslen-0.4.1-TEST.apk)**
+
+**[GitHub Releases — sürüm sayfası](https://github.com/M93hasan/seslen/releases/tag/v0.4.1-test-20261110)** · Dosya adı: `Seslen-0.4.1-TEST.apk` · Yaklaşık 1,15 MB.
+
+> **Önemli:** GitHub'da yayımlanan bu **0.4.1 test/debug APK'dır**, kararlı/üretim imzalı sürüm değildir. Mevcut APK'nın üzerine farklı imza nedeniyle kurulamayabilir; eski uygulamayı henüz silme. TV son bağlantı göstergesi için gereken Cloudflare Worker + D1 güncellemesi canlıda henüz doğrulanmadı. Bu sürüm, televizyonu uykudan uyandırma işlevini eklemez.
+
+
 **Seslen**, iPhone'dan uzaktaki Philips Android TV'ye mesaj gönderip ekranda büyük gösteren ve yüksek anlaşılabilirlik için Türkçe seslendiren bir aile iletişim uygulamasıdır. TV'deki mesajlar varsayılan olarak **3 kez** tekrarlanır; kumandada **OK** ile “Görüldü” olarak onaylanır.
 
-> **Son durum: 9 Kasım 2026 — 0.3 TEST sürümü**. APK derlendi ve GitHub otomatik testleri geçti. **Google girişinde kullanıcıdan hata bildirimi alındı; bu hata henüz çözülüp doğrulanmadı.** Gerçek iPhone/Philips TV ve standby kabul testleri tamamlanmadı. **Kararlı sürüm veya canlı kullanım garantisi yok.**
+> **Son durum: 10 Kasım 2026 — 0.4.1 TEST APK GitHub Releases'a yüklendi.** Android ve sunucu otomatik testleri başarılı. TV'nin son bağlantı zamanını göstermek üzere kod ve [PR #13](https://github.com/M93hasan/seslen/pull/13) hazır. **Worker/D1 canlı geçişi ve gerçek TV doğrulaması tamamlanmadı.** Google girişinin gerçek cihazda sorunsuz çalıştığı ayrıca doğrulanmalı. Bu henüz üretim sürümü değildir.
 
 ## 📖 Projenin tamamını buradan oku
 **[SESLEN PROJE KİTABI — Tüm özellikler, önceki kararlar, kurulum, testler, teknik yapı, hatalar ve kalan işler](docs/PROJECT-BOOK.md)**
@@ -26,22 +35,23 @@ Bu dosya GitHub'ın varsayılan **`main` dalında** bulunmaktadır. Geliştirme 
 ### Geliştirme / doğrulama tablosu
 | Bölüm | Kod durumu | Gerçek ortam |
 |---|---|---|
-| 0.3 TV APK ve iPhone arayüzü | ✅ Var | ⚠️ Gerçek Philips/iPhone testleri eksik |
+| 0.4.1 Android TV test APK ve iPhone web arayüzü | ✅ APK GitHub Releases'ta | ⚠️ Gerçek Philips/iPhone testleri eksik |
 | Google giriş ve QR eşleştirme | ✅ Var | ❌ Kullanıcı giriş hatası bildirdi |
 | D1, Worker, VAPID ayarları | ✅ Bağlı hesapta doğrulandı | ⚠️ Gerçek uçtan uca test eksik |
 | Tekrarlama, OK, TTS, ses kaydı | ✅ Geliştirildi | ⚠️ TV'de tüm medya senaryoları denenmedi |
 | TV'yi bekleme modundan açma | ❌ Kanıtlanmış çözüm yok | ❌ Philips cihaz testi eksik |
 | Üretim imzalı sürüm | ❌ Henüz yok | ❌ Son kabul ve onay bekleniyor |
 
-## 📱 Güncel TEST APK (Android TV)
-**[0.3 düzeltme dalı — GitHub Actions, başarılı test ve APK](https://github.com/M93hasan/seslen/actions/runs/42678786191)**
+## 📱 Güncel test APK (Android TV)
 
-GitHub Actions içinde: **Artifacts → `seslen-0.3.0-test-apk` → ZIP → `app-debug.apk`**. GitHub otomatik test artifact'lerini ZIP olarak verir. Kullanıcıya aynı APK'nın **ZIP'den çıkarılmış doğrudan indirilebilir `Seslen-0.3.0-test.apk` dosyası ChatGPT sohbetinde teslim edildi**; sohbetin geçici indirme adresi kalıcı GitHub bağlantısı olarak eklenmedi. GitHub Releases üzerinde ayrı dosya yayımlanırsa buradaki indirme yolu güncellenecek.
+**Güncel GitHub dosyası: [Seslen-0.4.1-TEST.apk](https://github.com/M93hasan/seslen/releases/download/v0.4.1-test-20261110/Seslen-0.4.1-TEST.apk)**. Bu doğrudan APK bağlantısıdır; **Actions artifact ZIP'ini indirmene gerek yok.** [Sürüm ayrıntıları](https://github.com/M93hasan/seslen/releases/tag/v0.4.1-test-20261110).
+
+0.3 APK geçmiş sürümdür: [önceki 0.3 CI kaydı](https://github.com/M93hasan/seslen/actions/runs/42678786191). 0.4.1 test sürümünde TV alıcısının son temasını izleme için sunucu değişikliği hazırlanmıştır; canlı yayında görünmesi için Worker/D1 güncellemesi ayrıca gerekir.
 
 **TV'ye kurulum:** APK'yı TV'ye USB/dosya yöneticisiyle aktar veya yerel ağda ADB kullan:
 ~~~sh
 adb connect <TV_IP>:5555
-adb install -r Seslen-0.3.0-test.apk
+adb install -r Seslen-0.4.1-TEST.apk
 adb shell am start -n site.serula.seslen/.MainActivity
 ~~~
 TV'nin internet bağlantısı ve **Diğer uygulamaların üzerinde gösterme** izni gerekli. ADB 5555 portunu internete açma. Önce uygulama içindeki **Görüntü ve Türkçe ses testi**ni yap. APK debug imzalıdır; üretim APK'sına güncellerken farklı imza nedeniyle tek seferlik yeniden kurulum gerekebilir.
