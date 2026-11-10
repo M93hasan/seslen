@@ -27,3 +27,22 @@ test('account identity remains scoped and TV pairing returns only its linked acc
 
 
 test('TV presence is authorized, fresh only after receiver polling, and never claims power-off',async()=>{const {env,sql}=setup();const {id,token}=await paired(env);await seed(env,'other','two','browser');const before=(await (await call(env,'/api/devices',undefined,'browser')).json()).devices[0];assert.equal(before.presence,'unknown');assert.equal(before.lastSeen,null);assert.deepEqual((await (await call(env,'/api/devices',undefined,'other')).json()).devices,[]);assert.equal((await call(env,'/api/inbox',undefined,'browser')).status,403);assert.equal((await call(env,'/api/inbox',undefined,token)).status,200);const active=(await (await call(env,'/api/devices',undefined,'browser')).json()).devices[0];assert.equal(active.id,id);assert.equal(active.presence,'active');assert.ok(active.lastSeen>0);sql.prepare('UPDATE devices SET last_seen=? WHERE id=?').run(Math.floor(Date.now()/1000)-50,id);const stale=(await (await call(env,'/api/devices',undefined,'browser')).json()).devices[0];assert.equal(stale.presence,'unknown');assert.ok(stale.lastSeen<active.lastSeen);assert.equal((await call(env,'/api/inbox',undefined,token)).status,200);assert.equal((await (await call(env,'/api/devices',undefined,'browser')).json()).devices[0].presence,'active');await call(env,'/api/revoke',{device:id},'browser');assert.deepEqual((await (await call(env,'/api/devices',undefined,'browser')).json()).devices,[]);assert.equal((await call(env,'/api/inbox',undefined,token)).status,401)});
+
+
+test('custom domain OAuth redirects and pairing use the visited trusted host',async()=>{
+ const {env}=setup();
+ env.GOOGLE_CLIENT_ID='test.apps.googleusercontent.com';
+ env.GOOGLE_CLIENT_SECRET='test';
+ for(const host of ['https://seslen.serula.site','https://seslen-staging.m93hasan.workers.dev']){
+  const pair=await worker.fetch(new Request(host+'/api/pair/start',{method:'POST',body:'{}'}),env);
+  assert.equal(pair.status,200);
+  const details=await pair.json();
+  assert.equal(details.url,host+'/?pair='+details.code);
+  const login=await worker.fetch(new Request(host+'/auth/login'),env);
+  assert.equal(login.status,302);
+  const google=new URL(login.headers.get('Location'));
+  assert.equal(google.searchParams.get('redirect_uri'),host+'/auth/callback');
+ }
+ const malicious=await worker.fetch(new Request('https://untrusted.example/auth/login'),env);
+ assert.equal(malicious.status,403);
+});
