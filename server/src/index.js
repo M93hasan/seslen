@@ -47,7 +47,7 @@ export default {
  if(path.startsWith('/api/')){
  const user=await auth(req,env);
  if(path==='/api/account'&&req.method==='GET'){assert(user.kind==='browser'||user.kind==='tv',403);const account=await env.DB.prepare('SELECT email FROM accounts WHERE owner=?').bind(user.owner).first();return json({email:account?.email||'',kind:user.kind});}
- if(path==='/api/inbox'&&req.method==='GET'){assert(user.kind==='tv',403);const r=await env.DB.prepare('SELECT id,text,audio FROM messages WHERE device=? AND done=0 AND created>? ORDER BY created,rowid LIMIT 50').bind(user.id,now()-604800).all();return json({messages:r.results});}
+ if(path==='/api/inbox'&&req.method==='GET'){assert(user.kind==='tv',403);await env.DB.prepare('UPDATE devices SET last_seen=? WHERE id=? AND (last_seen IS NULL OR last_seen<?)').bind(now(),user.id,now()-30).run();const r=await env.DB.prepare('SELECT id,text,audio FROM messages WHERE device=? AND done=0 AND created>? ORDER BY created,rowid LIMIT 50').bind(user.id,now()-604800).all();return json({messages:r.results});}
  if(path==='/api/events'&&req.method==='POST'){
  assert(user.kind==='tv',403);const b=await body(req);assert(typeof b.id==='string'&&['delivered','finished','seen','failed'].includes(b.status));
  const status=b.status==='finished'?'delivered':b.status;
@@ -65,7 +65,7 @@ export default {
  const r=await env.DB.prepare('INSERT INTO push_subscriptions(id,owner,session_hash,endpoint,created) SELECT ?,?,?,?,? WHERE (SELECT COUNT(*) FROM push_subscriptions WHERE owner=?)<5 OR EXISTS(SELECT 1 FROM push_subscriptions WHERE id=?) ON CONFLICT(id) DO UPDATE SET owner=excluded.owner,session_hash=excluded.session_hash,created=excluded.created').bind(id,user.owner,user.hash,b.endpoint,now(),user.owner,id).run();assert(r.meta.changes===1,429);return json({ok:true});
  }
  if(path==='/api/push/unsubscribe'&&req.method==='POST'){assert(user.kind==='browser',403);await env.DB.prepare('DELETE FROM push_subscriptions WHERE session_hash=?').bind(user.hash).run();return json({ok:true});}
- if(path==='/api/devices'&&req.method==='GET')return json({devices:(await env.DB.prepare('SELECT id,name FROM devices WHERE owner=? AND revoked=0').bind(user.owner).all()).results});
+ if(path==='/api/devices'&&req.method==='GET'){const rows=(await env.DB.prepare('SELECT id,name,last_seen FROM devices WHERE owner=? AND revoked=0').bind(user.owner).all()).results;return json({devices:rows.map(d=>({id:d.id,name:d.name,lastSeen:d.last_seen,presence:d.last_seen!=null&&d.last_seen>=now()-45?'active':'unknown'}))});}
  if(path==='/api/pair/confirm'&&req.method==='POST'){
  assert(user.kind==='browser',403);const b=await body(req);assert(typeof b.code==='string'&&/^[A-F0-9]{12}$/.test(b.code));const token=random(),id=crypto.randomUUID();const name=typeof b.name==='string'?b.name.slice(0,80):'Seslen TV';
  const r=await env.DB.batch([env.DB.prepare('UPDATE pairs SET token=? WHERE code=? AND expires>? AND token IS NULL').bind(token,b.code,now()),env.DB.prepare('INSERT INTO devices(id,owner,name,hash) SELECT ?,?,?,? WHERE changes()=1').bind(id,user.owner,name,await hash(token))]);assert(r[0].meta.changes===1,409);return json({id});
