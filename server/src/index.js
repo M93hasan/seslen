@@ -9,12 +9,18 @@ const now=()=>Math.floor(Date.now()/1000);
 const json=(data,status=200,headers={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});
 const cookie=(name,value,age)=>`${name}=${value}; Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age=${age}`;
 const cookies=req=>Object.fromEntries((req.headers.get('Cookie')||'').split(';').map(x=>x.trim().split('=')));
+const SESLEN_ORIGINS=new Set(['https://seslen.serula.site','https://seslen-staging.m93hasan.workers.dev']);
+function siteOrigin(req,env){
+ const origin=new URL(req.url).origin;
+ assert(origin===env.ORIGIN||SESLEN_ORIGINS.has(origin),403);
+ return origin;
+}
 async function bounded(req,max){const reader=req.body?.getReader();if(!reader)return new Uint8Array();let chunks=[],size=0;while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>max){await reader.cancel();throw {status:413}}chunks.push(value)}const a=new Uint8Array(size);let i=0;for(const c of chunks){a.set(c,i);i+=c.length}return a;}
 async function body(req){try{return JSON.parse(new TextDecoder().decode(await bounded(req,16384)))}catch(e){throw {status:e.status||400}}}
 function assert(ok,status=400){if(!ok)throw {status};}
 async function rate(req,env,path){const ip=req.headers.get('CF-Connecting-IP')||'local';const id=await hash(ip+path+Math.floor(now()/60));const r=await env.DB.prepare('INSERT INTO limits(id,n,expires) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET n=n+1 RETURNING n').bind(id,now()+120).first();assert(r.n<=60,429);}
 async function auth(req,env){const bearer=req.headers.get('Authorization')?.replace(/^Bearer /,'');const secret=bearer||cookies(req).session;assert(secret,401);const h=await hash(secret);
- const s=await env.DB.prepare('SELECT owner,kind FROM sessions WHERE hash=? AND expires>?').bind(h,now()).first();if(s){if(!bearer&&req.method!=='GET')assert(req.headers.get('Origin')===env.ORIGIN,403);return {...s,hash:h};}
+ const s=await env.DB.prepare('SELECT owner,kind FROM sessions WHERE hash=? AND expires>?').bind(h,now()).first();if(s){if(!bearer&&req.method!=='GET')assert(req.headers.get('Origin')===siteOrigin(req,env),403);return {...s,hash:h};}
  const d=await env.DB.prepare('SELECT id,owner FROM devices WHERE hash=? AND revoked=0').bind(h).first();assert(d,401);return {...d,kind:'tv',hash:h};}
 async function device(env,id,owner){return env.DB.prepare('SELECT id FROM devices WHERE id=? AND owner=? AND revoked=0').bind(id,owner).first();}
 export default {
@@ -27,19 +33,19 @@ export default {
  const pairing=url.searchParams.get('pair')||'';if(pairing){assert(/^[A-F0-9]{12}$/.test(pairing));assert(await env.DB.prepare('SELECT code FROM pairs WHERE code=? AND expires>? AND token IS NULL').bind(pairing,now()).first(),410);}
  const state=random(),verifier=random(),nonce=random();await env.DB.prepare('INSERT INTO oauth(state,verifier,nonce,expires,pair_code) VALUES(?,?,?,?,?)').bind(await hash(state),verifier,nonce,now()+600,pairing).run();
  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(verifier)));const challenge=btoa(String.fromCharCode(...digest)).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
- const u=new URL('https://accounts.google.com/o/oauth2/v2/auth');u.search=new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID,redirect_uri:env.ORIGIN+'/auth/callback',response_type:'code',scope:'openid email',state,nonce,code_challenge:challenge,code_challenge_method:'S256'}).toString();
+ const u=new URL('https://accounts.google.com/o/oauth2/v2/auth');u.search=new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID,redirect_uri:siteOrigin(req,env)+'/auth/callback',response_type:'code',scope:'openid email',state,nonce,code_challenge:challenge,code_challenge_method:'S256'}).toString();
  return new Response(null,{status:302,headers:{Location:u.href,'Set-Cookie':cookie('oauth',state,600),'Cache-Control':'no-store'}});
  }
  if(path==='/auth/callback'&&req.method==='GET'){
  const state=url.searchParams.get('state');assert(state&&state===cookies(req).oauth,403);
  const flow=await env.DB.prepare('DELETE FROM oauth WHERE state=? AND expires>? RETURNING *').bind(await hash(state),now()).first();assert(flow,403);
- const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({code:url.searchParams.get('code')||'',client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET,redirect_uri:env.ORIGIN+'/auth/callback',grant_type:'authorization_code',code_verifier:flow.verifier})});assert(response.ok,401);
+ const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({code:url.searchParams.get('code')||'',client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET,redirect_uri:siteOrigin(req,env)+'/auth/callback',grant_type:'authorization_code',code_verifier:flow.verifier})});assert(response.ok,401);
  const tokens=await response.json();const {payload}=await jwtVerify(tokens.id_token,createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs')),{issuer:['https://accounts.google.com','accounts.google.com'],audience:env.GOOGLE_CLIENT_ID});assert(payload.nonce===flow.nonce&&payload.sub,401);
  const email=payload.email_verified===true&&typeof payload.email==='string'?payload.email:'';await env.DB.prepare('INSERT INTO accounts(owner,email) VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET email=excluded.email').bind(payload.sub,email).run();
  const session=random();await env.DB.prepare('INSERT INTO sessions VALUES(?,?,?,?)').bind(await hash(session),payload.sub,'browser',now()+2592000).run();return new Response(null,{status:302,headers:{Location:flow.pair_code?'/?pair='+encodeURIComponent(flow.pair_code):'/', 'Set-Cookie':cookie('session',session,2592000),'Cache-Control':'no-store'}});
  }
  if(path==='/api/pair/start'&&req.method==='POST'){
- await body(req);const code=random().slice(0,12).toUpperCase(),poll=random();await env.DB.prepare('INSERT INTO pairs VALUES(?,?,?,NULL)').bind(code,await hash(poll),now()+360).run();return json({code,poll,expires:360,url:env.ORIGIN+'/?pair='+code});
+ await body(req);const code=random().slice(0,12).toUpperCase(),poll=random();await env.DB.prepare('INSERT INTO pairs VALUES(?,?,?,NULL)').bind(code,await hash(poll),now()+360).run();return json({code,poll,expires:360,url:siteOrigin(req,env)+'/?pair='+code});
  }
  if(path==='/api/pair/poll'&&req.method==='POST'){
  const b=await body(req);assert(typeof b.poll==='string'&&b.poll.length===64);const h=await hash(b.poll);const row=await env.DB.prepare('DELETE FROM pairs WHERE poll=? AND expires>? AND token IS NOT NULL RETURNING token').bind(h,now()).first();if(!row)return json({waiting:true});const account=await env.DB.prepare('SELECT a.email FROM devices d LEFT JOIN accounts a ON a.owner=d.owner WHERE d.hash=?').bind(await hash(row.token)).first();return json({token:row.token,email:account?.email||''});
@@ -47,7 +53,7 @@ export default {
  if(path.startsWith('/api/')){
  const user=await auth(req,env);
  if(path==='/api/account'&&req.method==='GET'){assert(user.kind==='browser'||user.kind==='tv',403);const account=await env.DB.prepare('SELECT email FROM accounts WHERE owner=?').bind(user.owner).first();return json({email:account?.email||'',kind:user.kind});}
- if(path==='/api/inbox'&&req.method==='GET'){assert(user.kind==='tv',403);const r=await env.DB.prepare('SELECT id,text,audio FROM messages WHERE device=? AND done=0 AND created>? ORDER BY created,rowid LIMIT 50').bind(user.id,now()-604800).all();return json({messages:r.results});}
+ if(path==='/api/inbox'&&req.method==='GET'){assert(user.kind==='tv',403);await env.DB.prepare('UPDATE devices SET last_seen=? WHERE id=? AND (last_seen IS NULL OR last_seen<?)').bind(now(),user.id,now()-30).run();const r=await env.DB.prepare('SELECT id,text,audio FROM messages WHERE device=? AND done=0 AND created>? ORDER BY created,rowid LIMIT 50').bind(user.id,now()-604800).all();return json({messages:r.results});}
  if(path==='/api/events'&&req.method==='POST'){
  assert(user.kind==='tv',403);const b=await body(req);assert(typeof b.id==='string'&&['delivered','finished','seen','failed'].includes(b.status));
  const status=b.status==='finished'?'delivered':b.status;
@@ -65,7 +71,7 @@ export default {
  const r=await env.DB.prepare('INSERT INTO push_subscriptions(id,owner,session_hash,endpoint,created) SELECT ?,?,?,?,? WHERE (SELECT COUNT(*) FROM push_subscriptions WHERE owner=?)<5 OR EXISTS(SELECT 1 FROM push_subscriptions WHERE id=?) ON CONFLICT(id) DO UPDATE SET owner=excluded.owner,session_hash=excluded.session_hash,created=excluded.created').bind(id,user.owner,user.hash,b.endpoint,now(),user.owner,id).run();assert(r.meta.changes===1,429);return json({ok:true});
  }
  if(path==='/api/push/unsubscribe'&&req.method==='POST'){assert(user.kind==='browser',403);await env.DB.prepare('DELETE FROM push_subscriptions WHERE session_hash=?').bind(user.hash).run();return json({ok:true});}
- if(path==='/api/devices'&&req.method==='GET')return json({devices:(await env.DB.prepare('SELECT id,name FROM devices WHERE owner=? AND revoked=0').bind(user.owner).all()).results});
+ if(path==='/api/devices'&&req.method==='GET'){const rows=(await env.DB.prepare('SELECT id,name,last_seen FROM devices WHERE owner=? AND revoked=0').bind(user.owner).all()).results;return json({devices:rows.map(d=>({id:d.id,name:d.name,lastSeen:d.last_seen,presence:d.last_seen!=null&&d.last_seen>=now()-45?'active':'unknown'}))});}
  if(path==='/api/pair/confirm'&&req.method==='POST'){
  assert(user.kind==='browser',403);const b=await body(req);assert(typeof b.code==='string'&&/^[A-F0-9]{12}$/.test(b.code));const token=random(),id=crypto.randomUUID();const name=typeof b.name==='string'?b.name.slice(0,80):'Seslen TV';
  const r=await env.DB.batch([env.DB.prepare('UPDATE pairs SET token=? WHERE code=? AND expires>? AND token IS NULL').bind(token,b.code,now()),env.DB.prepare('INSERT INTO devices(id,owner,name,hash) SELECT ?,?,?,? WHERE changes()=1').bind(id,user.owner,name,await hash(token))]);assert(r[0].meta.changes===1,409);return json({id});

@@ -24,7 +24,7 @@ jobs:
         working-directory: android-tv
       - uses: actions/upload-artifact@v4
         with:
-          name: seslen-0.4.0-test-apk
+          name: seslen-0.4.1-test-apk
           path: android-tv/app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         if: always()
@@ -47,3 +47,23 @@ jobs:
       - run: npm test
       - run: npm run check
 
+
+  publish-test-apk:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/tv-presence-041'
+    needs: [android, server]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: seslen-0.4.1-test-apk
+          path: apk
+      - name: Publish directly downloadable debug APK as a GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          test -s apk/app-debug.apk
+          cp apk/app-debug.apk Seslen-0.4.1-TEST.apk
+          gh release create v0.4.1-test-20261110 Seslen-0.4.1-TEST.apk --target "${GITHUB_SHA}" --title 'Seslen 0.4.1 TEST (Android TV)' --prerelease --notes 'TV alıcısı 0.4.1 test derlemesi. TV son bağlantı göstergesi için eşleşen Worker ve D1 migration ayrıca yayımlanmalıdır. Üretim imzalı sürüm değildir; mevcut imzalı uygulamanın üzerine kurulamayabilir. TV uyandırma özelliği henüz yok.'
