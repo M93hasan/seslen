@@ -6,6 +6,8 @@
 
 **[GitHub Releases — sürüm sayfası](https://github.com/M93hasan/seslen/releases/tag/v0.4.1-test-20261110)** · Dosya adı: `Seslen-0.4.1-TEST.apk` · Yaklaşık 1,15 MB.
 
+> **İndirme uyarısı:** `M93hasan/seslen` deposu **gizlidir (private)**. Bu GitHub APK bağlantısı yalnızca depoya erişim izni olan hesaplarla **GitHub'a giriş yaptıktan sonra** açılır; bağlantıyı anonim TV tarayıcısında açmak 404/erişim hatası verebilir. Depoyu sırf APK için herkese açık yapmayın; herkese açık, ayrı bir APK dağıtım adresi hazırlanmalıdır. Geçici alternatif: APK'yı GitHub'a erişebilen telefona indirip TV'ye aktarın.
+
 > **Önemli:** GitHub'da yayımlanan bu **0.4.1 test/debug APK'dır**, kararlı/üretim imzalı sürüm değildir. Mevcut APK'nın üzerine farklı imza nedeniyle kurulamayabilir; eski uygulamayı henüz silme. TV son bağlantı göstergesi için gereken Cloudflare Worker + D1 güncellemesi canlıda henüz doğrulanmadı. Bu sürüm, televizyonu uykudan uyandırma işlevini eklemez.
 
 
