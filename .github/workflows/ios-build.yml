@@ -9,13 +9,14 @@ permissions:
   contents: read
 jobs:
   ios:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Select installed Xcode
         run: |
           xcodebuild -version
+          test "$(xcrun --sdk iphoneos --show-sdk-version | cut -d. -f1)" -ge 26
           xcrun --sdk iphonesimulator --show-sdk-version
       - name: Install XcodeGen
         run: brew install xcodegen

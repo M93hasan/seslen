@@ -4,8 +4,8 @@ import SwiftUI
 enum SeslenPalette {
     static let paper = Color(uiColor: .systemGroupedBackground)
     static let ink = Color.primary
-    static let green = Color(uiColor: .systemBlue)
-    static let mint = Color(uiColor: .tertiarySystemFill)
+    static let accent = Color(uiColor: .systemBlue)
+    static let fill = Color(uiColor: .tertiarySystemFill)
     static let muted = Color.secondary
     static let border = Color(uiColor: .separator)
     static let orange = Color(uiColor: .systemOrange)
@@ -19,10 +19,6 @@ struct SeslenCard<Content: View>: View {
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24))
-            .overlay {
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(SeslenPalette.border.opacity(0.8), lineWidth: 1)
-            }
     }
 }
 
@@ -33,23 +29,26 @@ struct SeslenPrimaryButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Text(title).fontWeight(.semibold)
-                Spacer(minLength: 0)
-                Image(systemName: symbol)
-            }
-            .font(.system(size: 16))
-            .padding(.horizontal, 20)
-            .frame(height: 56)
-            .foregroundStyle(.white)
-            .background(
-                disabled ? SeslenPalette.muted : SeslenPalette.green,
-                in: RoundedRectangle(cornerRadius: 16)
-            )
+        styledButton
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .disabled(disabled)
+    }
+
+    @ViewBuilder private var styledButton: some View {
+        if #available(iOS 26.0, *) {
+            button.buttonStyle(.glassProminent)
+        } else {
+            button.buttonStyle(.borderedProminent)
         }
-        .buttonStyle(.plain)
-        .disabled(disabled)
+    }
+
+    private var button: some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 32)
+        }
     }
 }
 
@@ -70,16 +69,9 @@ struct ContentView: View {
                     welcome
                 }
             }
+            .navigationTitle(store.signedIn ? "Seslen" : "")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "waveform")
-                            .foregroundStyle(SeslenPalette.orange)
-                        Text("seslen.")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundStyle(SeslenPalette.ink)
-                    }
-                }
                 if store.signedIn {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
@@ -92,8 +84,6 @@ struct ContentView: View {
                     }
                 }
             }
-            .toolbarBackground(SeslenPalette.paper, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
             .sheet(isPresented: $showPairing) {
                 PairingSheet().environmentObject(store)
             }
@@ -119,49 +109,43 @@ struct ContentView: View {
                 }
             }
         }
-        .tint(SeslenPalette.green)
+        .tint(SeslenPalette.accent)
     }
 
     private var welcome: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Spacer(minLength: 30)
                 ZStack {
-                    RoundedRectangle(cornerRadius: 42)
-                        .fill(SeslenPalette.mint)
-                        .frame(height: 220)
+                    RoundedRectangle(cornerRadius: 36, style: .continuous)
+                        .fill(LinearGradient(
+                            colors: [.indigo.opacity(0.30), .cyan.opacity(0.18), .blue.opacity(0.06)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ))
                     if let file = Bundle.main.url(forResource: "SeslenLogo", withExtension: "webp"),
                        let bytes = try? Data(contentsOf: file),
                        let logo = UIImage(data: bytes) {
                         Image(uiImage: logo)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 188, height: 188)
-                            .accessibilityLabel("Seslen uygulama logosu")
+                            .padding(28)
                     } else {
-                        VStack(spacing: 14) {
-                            Image(systemName: "tv.and.mediabox")
-                                .font(.system(size: 66, weight: .thin))
-                                .foregroundStyle(SeslenPalette.green)
-                            Image(systemName: "waveform")
-                                .font(.system(size: 30, weight: .medium))
-                                .foregroundStyle(SeslenPalette.orange)
-                        }
+                        Image(systemName: "tv.and.mediabox")
+                            .font(.system(size: 68, weight: .medium))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.indigo)
                     }
                 }
-                Text("BİR SES KADAR YAKIN")
-                    .font(.system(size: 11, weight: .heavy))
-                    .tracking(2.5)
-                    .foregroundStyle(SeslenPalette.green)
-                Text("Telefonu duymadıysa,\ntelevizyona seslen.")
-                    .font(.system(size: 35, weight: .bold, design: .rounded))
-                    .tracking(-1.2)
-                    .foregroundStyle(SeslenPalette.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("Sevdiklerine yazılı veya kendi sesinle mesaj gönder. Philips Android TV'de görünsün, üç kez seslendirilsin.")
-                    .font(.system(size: 16))
-                    .foregroundStyle(SeslenPalette.muted)
-                    .lineSpacing(5)
+                .frame(height: 210)
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Seslen")
+                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                        .accessibilityAddTraits(.isHeader)
+                    Text("Televizyona yazılı veya sesli mesaj gönder.")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
 
                 SeslenPrimaryButton(
                     title: store.isBusy ? "Google bağlantısı açılıyor…" : "Google ile devam et",
@@ -182,20 +166,6 @@ struct ContentView: View {
     private var dashboard: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("EVİNE BİR SES GÖNDER")
-                        .font(.system(size: 11, weight: .heavy))
-                        .tracking(2.4)
-                        .foregroundStyle(SeslenPalette.green)
-                    Text("Ne söylemek istersin?")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundStyle(SeslenPalette.ink)
-                    Text(store.accountEmail)
-                        .font(.caption)
-                        .foregroundStyle(SeslenPalette.muted)
-                }
-                .padding(.top, 18)
-
                 SeslenCard {
                     VStack(alignment: .leading, spacing: 14) {
                         Label("Televizyonun", systemImage: "tv")
@@ -232,7 +202,7 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(spacing: 10) {
                             Image(systemName: "paperplane.fill")
-                                .foregroundStyle(SeslenPalette.green)
+                                .foregroundStyle(SeslenPalette.accent)
                             Text("Televizyona gönder")
                                 .font(.title3.bold())
                                 .foregroundStyle(SeslenPalette.ink)
@@ -262,10 +232,10 @@ struct ContentView: View {
                 if !store.notice.isEmpty {
                     Label(store.notice, systemImage: "info.circle")
                         .font(.footnote)
-                        .foregroundStyle(SeslenPalette.green)
+                        .foregroundStyle(SeslenPalette.accent)
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(SeslenPalette.mint, in: RoundedRectangle(cornerRadius: 14))
+                        .background(SeslenPalette.fill, in: RoundedRectangle(cornerRadius: 14))
                 }
 
                 SeslenCard {
@@ -305,7 +275,7 @@ struct ContentView: View {
                     }
                 }
 
-                Text("Seslen · iPhone uygulaması · Test sürümü")
+                Text("Seslen · Test sürümü")
                     .font(.caption2)
                     .foregroundStyle(SeslenPalette.muted)
                     .frame(maxWidth: .infinity)
@@ -351,9 +321,9 @@ struct ContentView: View {
             VStack(spacing: 10) {
                 Image(systemName: voice.isRecording ? "waveform" : "mic.fill")
                     .font(.system(size: 35))
-                    .foregroundStyle(voice.isRecording ? SeslenPalette.orange : SeslenPalette.green)
+                    .foregroundStyle(voice.isRecording ? SeslenPalette.orange : SeslenPalette.accent)
                     .frame(width: 68, height: 68)
-                    .background(SeslenPalette.mint, in: Circle())
+                    .background(SeslenPalette.fill, in: Circle())
                 Text(voice.isRecording ? "Sesin kaydediliyor…" :
                         voice.hasRecording ? "Kaydın hazır" : "Kendi sesinle seslen")
                     .font(.headline)
@@ -426,11 +396,11 @@ struct MessageRow: View {
                 Spacer()
                 Text(message.statusTitle)
                     .font(.caption2.weight(.medium))
-                    .foregroundStyle(message.status == "failed" ? .red : SeslenPalette.green)
+                    .foregroundStyle(message.status == "failed" ? .red : SeslenPalette.accent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(
-                        message.status == "failed" ? Color.red.opacity(0.08) : SeslenPalette.mint,
+                        message.status == "failed" ? Color.red.opacity(0.08) : SeslenPalette.fill,
                         in: Capsule()
                     )
             }
