@@ -59,7 +59,8 @@ final class SeslenStore: ObservableObject {
             devices = resultDevices.devices
             messages = resultMessages.messages
             if !devices.contains(where: { $0.id == selectedDeviceID }) {
-                selectedDeviceID = devices.first?.id ?? ""
+                let lastUsed = UserDefaults.standard.string(forKey: "seslen.lastUsedTV")
+                selectedDeviceID = devices.first(where: { $0.id == lastUsed })?.id ?? devices.first?.id ?? ""
             }
             notice = devices.isEmpty
                 ? "TV'de Seslen'i açıp QR kodunu okut."
@@ -99,6 +100,7 @@ final class SeslenStore: ObservableObject {
             let _: MessageReply = try await api.post(
                 "/api/messages", payload: payload, token: token
             )
+            UserDefaults.standard.set(payload.device, forKey: "seslen.lastUsedTV")
             draft = ""
             notice = "Mesaj gönderildi. Televizyona ulaşması bekleniyor."
             await refreshMessages()
@@ -112,15 +114,17 @@ final class SeslenStore: ObservableObject {
         isBusy = true
         defer { isBusy = false }
         do {
+            let deviceID = selectedDeviceID
             let bytes = try Data(contentsOf: fileURL)
             let uploaded = try await api.uploadAudio(bytes, token: token)
             let payload = MessagePayload(
-                device: selectedDeviceID, text: "",
+                device: deviceID, text: "",
                 audio: uploaded.audio, key: UUID().uuidString
             )
             let _: MessageReply = try await api.post(
                 "/api/messages", payload: payload, token: token
             )
+            UserDefaults.standard.set(payload.device, forKey: "seslen.lastUsedTV")
             notice = "Sesli mesaj gönderildi. Televizyona ulaşması bekleniyor."
             await refreshMessages()
             return true
@@ -171,5 +175,6 @@ final class SeslenStore: ObservableObject {
         devices = []
         messages = []
         selectedDeviceID = ""
+        draft = ""
     }
 }

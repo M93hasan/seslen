@@ -10,8 +10,9 @@ Android TV APK'sı mevcut mesaj **alıcısı** olarak kalır. SwiftUI ile geliş
 
 - Google ile oturum açma: Apple AuthenticationServices tarayıcı oturumu; PKCE, kısa ömürlü tek kullanımlık bilet ve iOS Keychain.
 - Kullanıcının hesabına bağlı TV'leri listeleme, TV seçimi, kamera ile QR okutma veya 12 haneli kod ile eşleştirme.
-- Yazılı Türkçe mesaj, hazır mesajlar, karakter sayacı, gönderme.
+- Boş metin alanı ve ses kaydı yan yana sekmelerde açılır. Başarılı gönderimden sonra kullanılan TV hatırlanır. Arayüz iPhone’un açık ve koyu görünümünü izler.
 - En fazla 60 saniyelik AAC/M4A ses kaydı, önizleme, en fazla 5 MB yükleme ve gönderme.
+- Ana ekrana eklenen Seslen web uygulamasından aynı hesap için Görüldü bildirimleri alınabilir. Kurulum bağlantısı iOS uygulamasının ayarlarındadır.
 - Son mesajların beklemede / teslim edildi / görüldü / gösterilemedi durumlarını uygulama açıkken izleme.
 - Kullanıcının gönderdiği Seslen logosu; ios/prepare-assets.sh ile Xcode app icon'u oluşturulur.
 - 30 günlük oturum anahtarını cihazın güvenli Keychain alanında saklama ve çıkışta kaldırma.

@@ -2,13 +2,13 @@ import AVFoundation
 import SwiftUI
 
 enum SeslenPalette {
-    static let paper = Color(red: 0.963, green: 0.970, blue: 0.951)
-    static let ink = Color(red: 0.095, green: 0.230, blue: 0.208)
-    static let green = Color(red: 0.123, green: 0.335, blue: 0.272)
-    static let mint = Color(red: 0.850, green: 0.930, blue: 0.875)
-    static let muted = Color(red: 0.407, green: 0.480, blue: 0.433)
-    static let border = Color(red: 0.862, green: 0.901, blue: 0.856)
-    static let orange = Color(red: 0.864, green: 0.485, blue: 0.324)
+    static let paper = Color(uiColor: .systemGroupedBackground)
+    static let ink = Color.primary
+    static let green = Color(uiColor: .systemBlue)
+    static let mint = Color(uiColor: .tertiarySystemFill)
+    static let muted = Color.secondary
+    static let border = Color(uiColor: .separator)
+    static let orange = Color(uiColor: .systemOrange)
 }
 
 struct SeslenCard<Content: View>: View {
@@ -18,7 +18,7 @@ struct SeslenCard<Content: View>: View {
         content
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.white, in: RoundedRectangle(cornerRadius: 24))
+            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24))
             .overlay {
                 RoundedRectangle(cornerRadius: 24)
                     .stroke(SeslenPalette.border.opacity(0.8), lineWidth: 1)
@@ -336,14 +336,6 @@ struct ContentView: View {
             .font(.caption2)
             .foregroundStyle(SeslenPalette.muted)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    quickNote("Yemek hazır", value: "Yemek hazır, seni bekliyoruz.")
-                    quickNote("Telefonuna bak", value: "Telefonuna bakabilir misin?")
-                    quickNote("Seni seviyorum", value: "Seni seviyorum.")
-                }
-            }
-
             SeslenPrimaryButton(
                 title: store.isBusy ? "Gönderiliyor…" : "Mesajı gönder",
                 symbol: "arrow.up.right",
@@ -352,20 +344,6 @@ struct ContentView: View {
                 Task { await store.sendText() }
             }
         }
-    }
-
-    private func quickNote(_ label: String, value: String) -> some View {
-        Button {
-            store.draft = value
-        } label: {
-            Text(label)
-                .font(.footnote.weight(.medium))
-                .padding(.horizontal, 13)
-                .padding(.vertical, 10)
-                .background(SeslenPalette.paper, in: Capsule())
-                .overlay(Capsule().stroke(SeslenPalette.border))
-        }
-        .buttonStyle(.plain)
     }
 
     private var voiceComposer: some View {
@@ -552,7 +530,8 @@ struct SettingsSheet: View {
                 }
                 Section("Mesaj durumu") {
                     Text("Mesajların görüldü durumunu uygulama açıkken takip edebilirsin.")
-                    Text("Bildirimler için Apple APNs kurulumu ayrı onay gerektirir.")
+                    Link("Seslen’i Safari’de aç", destination: URL(string: SeslenAPI.origin)!)
+                    Text("Uygulama kapalıyken bildirim almak için Safari’de Paylaş → Ana Ekrana Ekle’yi seç. Ana ekrandan Seslen’i aç, aynı Google hesabıyla giriş yap ve ayarlardan Görüldü bildirimlerini aç.")
                         .font(.footnote)
                         .foregroundStyle(SeslenPalette.muted)
                 }
