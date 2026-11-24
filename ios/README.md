@@ -21,14 +21,14 @@ TV'deki üç tekrar ve kumandadan OK ile Görüldü işlevi değişmez.
 
 ## Google giriş köprüsü
 
-Yeni, henüz canlıya yüklenmemiş native uç noktalar:
+Seslen sunucusunda etkin iOS uç noktaları:
 
 - GET /auth/ios/login?challenge=... (Google hesabına yönlendirir)
 - POST /api/ios/token (ticket ve PKCE verifier değişimi)
 
 iPhone 32 rastgele bayt üretir; Google şifresini uygulama içine almaz. Google'ın mevcut Web OAuth client'ı ve seslen.serula.site/auth/callback adresi kullanılır. Doğrulanan Google kullanıcısına, sunucuda yalnız SHA-256 hash'i saklanan 120 saniyelik tek kullanımlık bilet gönderilir. Seslen uygulaması seslen://auth derin bağlantısından bu bileti alır ve yalnız PKCE verifier ile kullanabilir. Başka uygulama bileti görse de verifier olmadan oturum alamaz. Session bearer token iOS Keychain'de saklanır; Google / TV veritabanı modeli korunur.
 
-Yeni D1 migration: server/migrations/0005_ios_native.sql. Yalnız yeni ios_tickets tablosu ve süre index'i ekler; mevcut OAuth tablosunu yeniden oluşturmaz. Native Worker deploy'undan önce migration gerekir. Yeni native yollar yalnız kullanıcının onayıyla yayınlanabilir.
+Yeni D1 migration: server/migrations/0006_ios_native.sql. Yalnız yeni ios_tickets tablosu ve süre index'i ekler; mevcut OAuth tablosunu yeniden oluşturmaz. Migration canlı Seslen D1 veritabanına uygulandı.
 
 **Önemli:** Google Cloud Console'da halihazırda bilinen redirect_uri_mismatch sorununun düzeltilmiş olması gerekir. Mevcut web OAuth Client'ın Authorized redirect URIs listesinde https://seslen.serula.site/auth/callback ve eski staging callback adresi bulunmalıdır.
 
@@ -47,7 +47,7 @@ GitHub [iOS CI](../.github/workflows/ios-build.yml) macOS'ta Simulator uygulamas
 - [x] Native SwiftUI kaynakları, API, Keychain, QR, metin ve ses.
 - [x] Mac iOS Simulator CI derlemesi ve sunucu testleri başarılı.
 - [x] İmzasız iPhoneOS IPA CI derleme ve paketleme başarılı.
-- [ ] Kullanıcı onaylı D1 migration ve Worker native login yayını.
+- [x] D1 migration ve Worker iOS girişi yayında. Canlı iOS giriş isteği Google’a yönlendiriyor.
 - [ ] Gerçek iPhone'da Google girişi, kamera, ses, mesaj geçmişi ve Philips TV 3 tekrar/OK uçtan uca doğrulama.
 - [ ] Apple Developer imzasıyla kurulabilir IPA / TestFlight.
 - [ ] İsteniyorsa APNs aracılığıyla iPhone arka plan bildirimi ve yerel Siri App Intents.

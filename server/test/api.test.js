@@ -1,6 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';import {readFileSync} from 'node:fs';import worker from '../src/index.js';
 const digest=async s=>Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))).toString('hex');
-function setup(){const sql=new DatabaseSync(':memory:');for(const name of ['0001.sql','0002_audio_storage.sql','0003_push.sql','0004_account_connect.sql','0005_ios_native.sql'])sql.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));function prep(query){let args=[];const stmt={bind(...values){args=values.map(v=>v instanceof ArrayBuffer?new Uint8Array(v):v);return stmt},async first(){return sql.prepare(query).get(...args)||null},async all(){return {results:sql.prepare(query).all(...args)}},async run(){const r=sql.prepare(query).run(...args);return {meta:{changes:Number(r.changes)}}}};return stmt}const objects=new Map();return {sql,env:{ORIGIN:'https://seslen.example',DB:{prepare:prep,async batch(stmts){sql.exec('BEGIN');try{const r=[];for(const s of stmts)r.push(await s.run());sql.exec('COMMIT');return r}catch(e){sql.exec('ROLLBACK');throw e}}},AUDIO:{async put(id,bytes,metadata){objects.set(id,{body:bytes,httpMetadata:metadata.httpMetadata})},async get(id){return objects.get(id)},async delete(id){objects.delete(id)}},ASSETS:{fetch(){return new Response('Seslen')}}}}}
+function setup(){const sql=new DatabaseSync(':memory:');for(const name of ['0001.sql','0002_audio_storage.sql','0003_push.sql','0004_account_connect.sql','0005_device_presence.sql','0006_ios_native.sql'])sql.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));function prep(query){let args=[];const stmt={bind(...values){args=values.map(v=>v instanceof ArrayBuffer?new Uint8Array(v):v);return stmt},async first(){return sql.prepare(query).get(...args)||null},async all(){return {results:sql.prepare(query).all(...args)}},async run(){const r=sql.prepare(query).run(...args);return {meta:{changes:Number(r.changes)}}}};return stmt}const objects=new Map();return {sql,env:{ORIGIN:'https://seslen.example',DB:{prepare:prep,async batch(stmts){sql.exec('BEGIN');try{const r=[];for(const s of stmts)r.push(await s.run());sql.exec('COMMIT');return r}catch(e){sql.exec('ROLLBACK');throw e}}},AUDIO:{async put(id,bytes,metadata){objects.set(id,{body:bytes,httpMetadata:metadata.httpMetadata})},async get(id){return objects.get(id)},async delete(id){objects.delete(id)}},ASSETS:{fetch(){return new Response('Seslen')}}}}}
 async function seed(env,token='sender',owner='one',kind='sender'){await env.DB.prepare('INSERT INTO sessions VALUES(?,?,?,?)').bind(await digest(token),owner,kind,Math.floor(Date.now()/1000)+1000).run()}
 function call(env,path,body,token,extra={}){return worker.fetch(new Request('https://seslen.example'+path,{method:body===undefined?'GET':'POST',headers:{...(token?{Authorization:'Bearer '+token}:{}),...extra},body:body===undefined?undefined:JSON.stringify(body)}),env)}
 async function paired(env){await seed(env,'browser','one','browser');const p=await (await call(env,'/api/pair/start',{})).json();assert.equal((await call(env,'/api/pair/confirm',{code:p.code,name:'TV'},'browser')).status,200);const {token}=await (await call(env,'/api/pair/poll',{poll:p.poll})).json();assert.ok(token);return {token,id:(await (await call(env,'/api/devices',undefined,'browser')).json()).devices[0].id,p};}
@@ -111,3 +111,24 @@ test('expired native tickets never issue tokens',async()=>{
 });
 
 const digestValue=digest;
+
+test('TV presence is authorized, fresh only after receiver polling, and never claims power-off',async()=>{const {env,sql}=setup();const {id,token}=await paired(env);await seed(env,'other','two','browser');const before=(await (await call(env,'/api/devices',undefined,'browser')).json()).devices[0];assert.equal(before.presence,'unknown');assert.equal(before.lastSeen,null);assert.deepEqual((await (await call(env,'/api/devices',undefined,'other')).json()).devices,[]);assert.equal((await call(env,'/api/inbox',undefined,'browser')).status,403);assert.equal((await call(env,'/api/inbox',undefined,token)).status,200);const active=(await (await call(env,'/api/devices',undefined,'browser')).json()).devices[0];assert.equal(active.id,id);assert.equal(active.presence,'active');assert.ok(active.lastSeen>0);sql.prepare('UPDATE devices SET last_seen=? WHERE id=?').run(Math.floor(Date.now()/1000)-50,id);const stale=(await (await call(env,'/api/devices',undefined,'browser')).json()).devices[0];assert.equal(stale.presence,'unknown');assert.ok(stale.lastSeen<active.lastSeen);assert.equal((await call(env,'/api/inbox',undefined,token)).status,200);assert.equal((await (await call(env,'/api/devices',undefined,'browser')).json()).devices[0].presence,'active');await call(env,'/api/revoke',{device:id},'browser');assert.deepEqual((await (await call(env,'/api/devices',undefined,'browser')).json()).devices,[]);assert.equal((await call(env,'/api/inbox',undefined,token)).status,401)});
+
+
+test('custom domain OAuth redirects and pairing use the visited trusted host',async()=>{
+ const {env}=setup();
+ env.GOOGLE_CLIENT_ID='test.apps.googleusercontent.com';
+ env.GOOGLE_CLIENT_SECRET='test';
+ for(const host of ['https://seslen.serula.site','https://seslen-staging.m93hasan.workers.dev']){
+  const pair=await worker.fetch(new Request(host+'/api/pair/start',{method:'POST',body:'{}'}),env);
+  assert.equal(pair.status,200);
+  const details=await pair.json();
+  assert.equal(details.url,host+'/?pair='+details.code);
+  const login=await worker.fetch(new Request(host+'/auth/login'),env);
+  assert.equal(login.status,302);
+  const google=new URL(login.headers.get('Location'));
+  assert.equal(google.searchParams.get('redirect_uri'),host+'/auth/callback');
+ }
+ const malicious=await worker.fetch(new Request('https://untrusted.example/auth/login'),env);
+ assert.equal(malicious.status,403);
+});
