@@ -1,5 +1,8 @@
-name: Seslen native iOS simulator build
+name: Seslen iOS unsigned IPA build
 on:
+  push:
+    branches:
+      - 'feat/ios-unsigned-ipa'
   pull_request:
     paths:
       - 'ios/**'
