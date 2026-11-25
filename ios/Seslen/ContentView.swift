@@ -1,6 +1,12 @@
 import AVFoundation
 import SwiftUI
 
+enum SeslenVersion {
+    static var current: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+    }
+}
+
 enum SeslenPalette {
     static let paper = Color(uiColor: .systemGroupedBackground)
     static let ink = Color.primary
@@ -77,10 +83,15 @@ struct ContentView: View {
                         Button {
                             showSettings = true
                         } label: {
-                            Image(systemName: "gearshape")
-                                .foregroundStyle(SeslenPalette.ink)
+                            VStack(spacing: 2) {
+                                Image(systemName: "gearshape")
+                                Text(SeslenVersion.current)
+                                    .font(.caption2.monospacedDigit())
+                            }
+                            .foregroundStyle(SeslenPalette.ink)
+                            .frame(minWidth: 44, minHeight: 44)
                         }
-                        .accessibilityLabel("Hesap ve ayarlar")
+                        .accessibilityLabel("Hesap ve ayarlar, sürüm \(SeslenVersion.current)")
                     }
                 }
             }
@@ -156,6 +167,9 @@ struct ContentView: View {
                 }
                 Text("Google hesabınla giriş yapıp televizyonundaki QR kodunu bir kez okutman yeterli.")
                     .font(.footnote)
+                    .foregroundStyle(SeslenPalette.muted)
+                Text("Sürüm \(SeslenVersion.current)")
+                    .font(.caption2)
                     .foregroundStyle(SeslenPalette.muted)
             }
             .padding(.horizontal, 24)
@@ -275,7 +289,7 @@ struct ContentView: View {
                     }
                 }
 
-                Text("Seslen · Test sürümü")
+                Text("Seslen · Sürüm \(SeslenVersion.current) · Test sürümü")
                     .font(.caption2)
                     .foregroundStyle(SeslenPalette.muted)
                     .frame(maxWidth: .infinity)
@@ -492,6 +506,9 @@ struct SettingsSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Uygulama") {
+                    LabeledContent("Sürüm", value: SeslenVersion.current)
+                }
                 Section("Google hesabın") {
                     Text(store.accountEmail)
                     Text("Oturum iPhone Keychain'de güvenle saklanır.")

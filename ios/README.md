@@ -32,6 +32,10 @@ Yeni D1 migration: server/migrations/0006_ios_native.sql. Yalnız yeni ios_ticke
 
 **Önemli:** Google Cloud Console'da halihazırda bilinen redirect_uri_mismatch sorununun düzeltilmiş olması gerekir. Mevcut web OAuth Client'ın Authorized redirect URIs listesinde https://seslen.serula.site/auth/callback ve eski staging callback adresi bulunmalıdır.
 
+## Sürüm
+
+Güncel iOS sürümü: **0.1**. Sürüm numarası `ios/project.yml` içindeki `CFBundleShortVersionString` değerinden okunur; giriş ekranında, ana ekranda, Ayarlar düğmesinde, Ayarlar sayfasında ve IPA dosya adında aynı değer kullanılır. Android TV ve sunucu sürümleri bağımsızdır.
+
 ## Derleme ve test
 
 1. Mac üzerinde Xcode ve XcodeGen kur (Homebrew: brew install xcodegen).
