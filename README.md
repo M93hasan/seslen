@@ -1,5 +1,15 @@
 # SESLEN — iPhone'dan Android TV'ye sesli ve yazılı mesaj
 
+## 📱 iPhone iOS IPA — Xcode olmadan kurulum
+
+**Dosya:** `Seslen-0.1.0-unsigned.ipa`
+
+**[IPA derleme ve indirme sayfası (GitHub Actions)](https://github.com/M93hasan/seslen/actions/workflows/ios-build.yml?query=branch%3Afeat%2Fios-native-seslen-sender)** · Başarılı derlemenin Artifacts bölümünden `seslen-ios-device-unsigned-ipa` ZIP dosyasını indir ve içindeki IPA'yı çıkar.
+
+> Önceki IPA artık indirilebilir değil; yeni başarılı derleme gerekiyor. Artifact saklama süresi 7 gündür. Bu bağlantı doğrudan IPA değil, derleme sayfasıdır. IPA imzasızdır; Mac'te Sideloadly ile Apple hesabınla imzalayıp iPhone'a yükle. Xcode kurulumu gerekmez.
+
+**[iOS kaynak kodu ve kurulum notları](https://github.com/M93hasan/seslen/blob/feat/ios-native-seslen-sender/ios/README.md)**
+
 ## 📥 Android TV APK — GitHub'dan doğrudan indir
 
 **[Seslen 0.4.1 APK indir (ZIP değil, doğrudan APK)](https://github.com/M93hasan/seslen/releases/download/v0.4.1-test-20261110/Seslen-0.4.1-TEST.apk)**
